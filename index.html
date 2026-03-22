@@ -1,167 +1,372 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <title>Multi Folder File Concatenator</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Folder Concatenator</title>
     <style>
+      :root {
+        --bg-main: #f8fafc;
+        --bg-card: #ffffff;
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --danger: #ef4444;
+        --danger-hover: #dc2626;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --radius: 8px;
+        --shadow:
+          0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
       body {
-        font-family: sans-serif;
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Header Section */
+      header {
+        background: var(--bg-card);
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-main);
+      }
+
+      /* Layout Containers */
+      .app-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        flex-grow: 1;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        background: var(--bg-card);
+        border-right: 1px solid var(--border);
         padding: 20px;
         display: flex;
         flex-direction: column;
-        height: 90vh;
-      }
-      .controls {
-        margin-bottom: 10px;
-      }
-      #folderList {
-        border: 1px solid #ccc;
-        height: 100px;
+        gap: 20px;
         overflow-y: auto;
-        margin: 10px 0;
-        padding: 5px;
-        list-style: none;
       }
-      #folderList li {
-        padding: 2px;
-        border-bottom: 1px solid #eee;
-        font-size: 12px;
+
+      .main-content {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        background: var(--bg-main);
       }
-      #output {
-        flex-grow: 1;
-        margin-top: 10px;
-        white-space: pre-wrap;
-        font-family: monospace;
+
+      /* UI Elements */
+      .section-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+        display: block;
       }
-      textarea {
+
+      button {
+        font-family: inherit;
+        font-weight: 500;
+        font-size: 0.875rem;
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      #addBtn {
+        background: var(--primary);
+        color: white;
+      }
+      #addBtn:hover {
+        background: var(--primary-hover);
+      }
+
+      #clearBtn {
+        background: white;
+        border-color: var(--border);
+        color: var(--text-main);
+      }
+      #clearBtn:hover {
+        background: #f1f5f9;
+      }
+
+      .action-bar {
+        display: flex;
+        gap: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+      }
+
+      #listBtn,
+      #concatBtn {
+        background: var(--text-main);
+        color: white;
+        flex: 1;
+      }
+      #copyBtn {
+        background: var(--primary);
+        color: white;
+      }
+
+      /* Inputs */
+      input[type="text"] {
         width: 100%;
-        height: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        outline: none;
+        transition: border-color 0.2s;
       }
-      .row {
-        margin: 10px 0;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="controls">
-      <button id="addBtn">Add Folders (Multi-Select)</button>
-      <button id="clearBtn">Clear All</button>
-    </div>
 
-    <ul
-      id="folderList"
-      style="
-        border: 1px solid #ccc;
-        height: 150px;
-        overflow-y: auto;
-        margin: 10px 0;
-        padding: 10px;
+      input[type="text"]:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      }
+
+      /* Lists & Items */
+      #folderList {
         list-style: none;
-        background: #f9f9f9;
-      "
-    ></ul>
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: #fafafa;
+        max-height: 250px;
+        overflow-y: auto;
+      }
 
-    <style>
       .folder-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 5px;
-        border-bottom: 1px solid #ddd;
-        font-size: 12px;
-      }
-      .remove-btn {
-        background: #ff4d4d;
-        color: white;
-        border: none;
-        padding: 2px 8px;
-        cursor: pointer;
-        border-radius: 3px;
-      }
-      .remove-btn:hover {
-        background: #cc0000;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.8125rem;
+        animation: fadeIn 0.3s ease;
       }
 
-      /* Simple CSS Spinner */
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+      .folder-item:last-child {
+        border-bottom: none;
       }
+
+      .remove-btn {
+        background: transparent;
+        color: var(--text-muted);
+        padding: 4px 8px;
+        font-size: 0.75rem;
+      }
+
+      .remove-btn:hover {
+        color: var(--danger);
+        background: #fee2e2;
+      }
+
+      /* Smart Excludes Chips */
+      #smartExcludes label {
+        background: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+      }
+
+      #smartExcludes label:hover {
+        border-color: var(--primary);
+        background: #f5f3ff;
+      }
+
+      /* Text Area & Output */
+      #output {
+        flex-grow: 1;
+        position: relative;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      textarea {
+        width: 100%;
+        height: 100%;
+        border: none;
+        padding: 20px;
+        font-family: "Fira Code", "Courier New", monospace;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        resize: none;
+        outline: none;
+        color: #334155;
+      }
+
+      /* Metadata Bar */
+      #metaInfo {
+        display: none;
+        gap: 24px;
+        background: #1e293b;
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: auto;
+      }
+
+      #metaInfo strong {
+        color: white;
+        margin-right: 4px;
+      }
+
+      /* Loading Overlay */
+      #loadingOverlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(4px);
+        z-index: 10000;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #e2e8f0;
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 16px;
+      }
+
       @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
+        to {
           transform: rotate(360deg);
         }
       }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      #cancelBtn {
+        background: var(--danger);
+        color: white;
+        margin-top: 15px;
+      }
+      #cancelBtn:hover {
+        background: var(--danger-hover);
+      }
     </style>
+  </head>
+  <body>
+    <header>
+      <h1>Concatenator.io</h1>
+      <div style="display: flex; gap: 8px">
+        <button id="addBtn">Add Folders</button>
+        <button id="clearBtn">Clear All</button>
+      </div>
+    </header>
 
-    <div class="row">
-      Excludes:
-      <input
-        type="text"
-        id="excludeInput"
-        placeholder="node_modules, .git, images"
-      />
+    <div class="app-container">
+      <div class="sidebar">
+        <div>
+          <span class="section-label">Selected Folders</span>
+          <ul id="folderList"></ul>
+        </div>
+
+        <div>
+          <span class="section-label">Auto-Detect Filters</span>
+          <div id="smartExcludes"></div>
+        </div>
+
+        <div>
+          <span class="section-label">Manual Excludes (CSV)</span>
+          <input
+            type="text"
+            id="excludeInput"
+            placeholder="e.g. temp, cache, logs"
+          />
+        </div>
+
+        <div class="action-bar">
+          <button id="listBtn">List Files</button>
+          <button id="concatBtn">Concat Files</button>
+        </div>
+        <button id="copyBtn">Copy Full Content</button>
+      </div>
+
+      <div class="main-content">
+        <div id="output">
+          <textarea
+            id="textContent"
+            placeholder="Output will appear here..."
+          ></textarea>
+        </div>
+
+        <div id="metaInfo">
+          <span><strong>Lines</strong> <span id="metaLines">0</span></span>
+          <span><strong>Words</strong> <span id="metaWords">0</span></span>
+          <span><strong>Size</strong> <span id="metaSize">0 KB</span></span>
+        </div>
+      </div>
     </div>
 
-    <div
-      id="smartExcludes"
-      style="margin: 10px 0; display: flex; flex-wrap: wrap; gap: 8px"
-    ></div>
-
-    <div class="row">
-      Manual Excludes (CSV):
-      <input type="text" id="excludeInput" placeholder="temp, cache, logs" />
-    </div>
-
-    <div class="row">
-      <button id="listBtn">List Files</button>
-      <button id="concatBtn">Concat Files</button>
-      <button id="copyBtn">Copy to Clipboard</button>
-    </div>
-
-    <div id="output">
-      <textarea id="textContent"></textarea>
-    </div>
-
-    <div
-      id="loadingOverlay"
-      style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.8);
-        z-index: 9999;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-      "
-    >
+    <div id="loadingOverlay">
       <div class="spinner"></div>
-      <p id="loadingText" style="margin: 10px 0">Processing...</p>
-      <button
-        id="cancelBtn"
-        style="
-          background: #ff4d4d;
-          color: white;
-          border: none;
-          padding: 8px 20px;
-          border-radius: 4px;
-          cursor: pointer;
-        "
-      >
-        Cancel Process
-      </button>
+      <p id="loadingText" style="font-weight: 600; color: var(--text-main)">
+        Processing...
+      </p>
+      <button id="cancelBtn">Cancel Process</button>
     </div>
-    
+
     <script src="renderer.js"></script>
   </body>
 </html>

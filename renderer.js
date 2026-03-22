@@ -40,9 +40,9 @@ const COMMON_NOISE = [
   "temp",
   "tmp",
   "*.gguf", // Added
-  "*.bin",  // Added
+  "*.bin", // Added
   "*.onnx", // Added
-  "*.weights" // Added
+  "*.weights", // Added
 ];
 
 // --- UI Helpers ---
@@ -163,6 +163,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
   activeSmartExcludes.clear();
   updateFolderUI();
   document.getElementById("textContent").value = "";
+  updateMetadata(""); // This will hide the meta bar
 });
 
 // --- Core File Logic ---
@@ -199,9 +200,23 @@ async function walk(dir, filelist = [], excludes = [], signal) {
       } else {
         const ext = path.extname(file).toLowerCase();
         const binaryExts = [
-  ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".exe", ".dll", ".pyc", ".ico",
-  ".gguf", ".bin", ".onnx", ".pt", ".pth", ".model" // Added binary/AI formats
-];
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".gif",
+          ".pdf",
+          ".zip",
+          ".exe",
+          ".dll",
+          ".pyc",
+          ".ico",
+          ".gguf",
+          ".bin",
+          ".onnx",
+          ".pt",
+          ".pth",
+          ".model", // Added binary/AI formats
+        ];
         if (!binaryExts.includes(ext)) {
           filelist.push(filePath);
         }
@@ -253,16 +268,24 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
       // --- Large File Check (> 1MB) ---
       if (fileSizeMB > 1) {
         // Pause UI loading to show dialog
-        const choice = await ipcRenderer.invoke('show-large-file-warning', fileName, fileSizeMB);
-        
-        if (choice === 1) { // Skip & Add to Exclude
-          const currentExcludes = excludeInput.value ? excludeInput.value.split(',').map(s => s.trim()) : [];
+        const choice = await ipcRenderer.invoke(
+          "show-large-file-warning",
+          fileName,
+          fileSizeMB,
+        );
+
+        if (choice === 1) {
+          // Skip & Add to Exclude
+          const currentExcludes = excludeInput.value
+            ? excludeInput.value.split(",").map((s) => s.trim())
+            : [];
           if (!currentExcludes.includes(fileName)) {
             currentExcludes.push(fileName);
-            excludeInput.value = currentExcludes.join(', ');
+            excludeInput.value = currentExcludes.join(", ");
           }
           continue; // Skip this file
-        } else if (choice === 2) { // Stop Process
+        } else if (choice === 2) {
+          // Stop Process
           abortController.abort();
           break;
         }
@@ -285,8 +308,13 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
       }
     }
 
+    // ... inside concatBtn listener, near the end:
     if (!signal.aborted) {
-      document.getElementById("textContent").value = combined || "No readable content found.";
+      const finalContent = combined || "No readable content found.";
+      document.getElementById("textContent").value = finalContent;
+
+      // Trigger the metadata update here
+      updateMetadata(finalContent);
     }
   } finally {
     setLoading(false);
@@ -305,3 +333,33 @@ document.getElementById("copyBtn").addEventListener("click", () => {
     btn.innerText = originalText;
   }, 2000);
 });
+
+function updateMetadata(text) {
+  const metaInfo = document.getElementById("metaInfo");
+  if (!text || text.trim() === "") {
+    metaInfo.style.display = "none";
+    return;
+  }
+
+  // Calculate Lines
+  const lines = text.split(/\r\n|\r|\n/).length;
+
+  // Calculate Words (matches alphanumeric sequences)
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0).length;
+
+  // Calculate Size (using Blob to get accurate byte count for UTF-8)
+  const bytes = new Blob([text]).size;
+  let sizeStr = "";
+  if (bytes < 1024) sizeStr = bytes + " B";
+  else if (bytes < 1048576) sizeStr = (bytes / 1024).toFixed(2) + " KB";
+  else sizeStr = (bytes / 1048576).toFixed(2) + " MB";
+
+  // Update UI
+  document.getElementById("metaLines").innerText = lines.toLocaleString();
+  document.getElementById("metaWords").innerText = words.toLocaleString();
+  document.getElementById("metaSize").innerText = sizeStr;
+  metaInfo.style.display = "flex";
+}
