@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Multi Folder File Concatenator</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; display: flex; flex-direction: column; height: 90vh; }
+        .controls { margin-bottom: 10px; }
+        #folderList { border: 1px solid #ccc; height: 100px; overflow-y: auto; margin: 10px 0; padding: 5px; list-style: none; }
+        #folderList li { padding: 2px; border-bottom: 1px solid #eee; font-size: 12px; }
+        #output { flex-grow: 1; margin-top: 10px; white-space: pre-wrap; font-family: monospace; }
+        textarea { width: 100%; height: 100%; }
+        .row { margin: 10px 0; }
+    </style>
+</head>
+<body>
+  <div class="controls">
+    <button id="addBtn">Add Folders (Multi-Select)</button>
+    <button id="clearBtn">Clear All</button>
+</div>
+
+<ul id="folderList" style="border: 1px solid #ccc; height: 150px; overflow-y: auto; margin: 10px 0; padding: 10px; list-style: none; background: #f9f9f9;"></ul>
+
+<style>
+    .folder-item { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        padding: 5px; 
+        border-bottom: 1px solid #ddd;
+        font-size: 12px;
+    }
+    .remove-btn { 
+        background: #ff4d4d; 
+        color: white; 
+        border: none; 
+        padding: 2px 8px; 
+        cursor: pointer; 
+        border-radius: 3px;
+    }
+    .remove-btn:hover { background: #cc0000; }
+</style>
+
+    <div class="row">
+        Excludes: <input type="text" id="excludeInput" placeholder="node_modules, .git, images">
+    </div>
+
+    <div class="row">
+        <button id="listBtn">List Files</button>
+        <button id="concatBtn">Concat Files</button>
+        <button id="copyBtn">Copy to Clipboard</button>
+    </div>
+
+    <div id="output">
+        <textarea id="textContent"></textarea>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>

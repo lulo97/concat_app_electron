@@ -1,0 +1,25 @@
+{
+  "name": "concat-app-electron",
+  "version": "1.0.0",
+  "description": "Multi-folder file concatenator",
+  "author": "Your Name",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.yourname.concatapp",
+    "productName": "FolderConcatenator",
+    "win": {
+      "target": "portable"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "devDependencies": {
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1"
+  }
+}
