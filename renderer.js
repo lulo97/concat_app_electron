@@ -1,12 +1,12 @@
 const { ipcRenderer } = require("electron");
-const fs = require("fs");
+const fs = require("fs").promises; // Use Promises to prevent UI freezing
 const path = require("path");
 
-// State Management
+// --- State Management ---
 let selectedFolders = [];
+let activeSmartExcludes = new Set();
 
 const COMMON_NOISE = [
-  // General & VCS
   "node_modules",
   ".git",
   ".svn",
@@ -15,74 +15,43 @@ const COMMON_NOISE = [
   "thumbs.db",
   ".env",
   ".env.local",
-
-  // JavaScript / TypeScript / Vue / React
   "dist",
   "build",
   "out",
   ".next",
   ".nuxt",
   ".cache",
-  ".vuepress",
-  ".serverless",
   "package-lock.json",
   "yarn.lock",
   "pnpm-lock.yaml",
   "bower_components",
-
-  // Python
   "venv",
   ".venv",
   "env",
-  "venv.bak",
   "__pycache__",
-  ".pytest_cache",
-  ".mypy_cache",
-  ".tox",
-  "poetry.lock",
-  "pip-log.txt",
-
-  // C# / .NET / Visual Studio
   "bin",
   "obj",
   ".vs",
   ".vscode",
-  "Properties",
-  "App.config",
-  "packages",
-  "TestResults",
-  "PublishScripts",
-  ".user",
-  ".suo",
-
-  // Java / Maven / Gradle
   "target",
   ".gradle",
-  ".mvn",
-  "build.log",
-  ".metadata",
-  ".recommenders",
-  "*.class", // Usually handled in file extension filter, but good for folders
-
-  // C++ / Compiled languages
-  "Debug",
-  "Release",
-  "x64",
-  "x86",
-  "ipch",
-
-  // Documentation / Logs
   "logs",
   "temp",
   "tmp",
-  "coverage",
 ];
 
-let activeSmartExcludes = new Set();
+// --- UI Helpers ---
 
-// --- Folder Management ---
+function setLoading(show, text = "Processing...") {
+  const overlay = document.getElementById("loadingOverlay");
+  const textEl = document.getElementById("loadingText");
+  if (overlay) {
+    overlay.style.display = show ? "flex" : "none";
+    textEl.innerText = text;
+  }
+}
 
-function updateFolderUI() {
+async function updateFolderUI() {
   const list = document.getElementById("folderList");
   list.innerHTML = "";
   selectedFolders.forEach((item, index) => {
@@ -97,40 +66,34 @@ function updateFolderUI() {
         `;
     list.appendChild(li);
   });
-  detectNoise();
+  await detectNoise();
 }
 
-// --- Updated Noise Detection ---
+// --- Non-Blocking Noise Detection ---
 
-function detectNoise() {
+async function detectNoise() {
   const foundInFolders = new Set();
 
-  // Scan every enabled folder recursively (with a depth limit)
-  selectedFolders
-    .filter((f) => f.enabled)
-    .forEach((folderObj) => {
-      scanForNoise(folderObj.path, foundInFolders, 0, 3); // Depth limit of 3
-    });
+  // Scan enabled folders
+  for (const folderObj of selectedFolders.filter((f) => f.enabled)) {
+    await scanForNoise(folderObj.path, foundInFolders, 0, 3);
+  }
 
   const container = document.getElementById("smartExcludes");
   if (!container) return;
 
-  // We keep existing checked states so user preferences aren't wiped on every refresh
   const previouslyChecked = new Set(activeSmartExcludes);
-
   container.innerHTML =
     foundInFolders.size > 0
-      ? "<div style='width:100%; font-size:12px; margin-bottom:5px;'><strong>Auto-Exclude detected (Recursive):</strong></div>"
+      ? "<div style='width:100%; font-size:12px; margin-bottom:5px;'><strong>Auto-Exclude detected:</strong></div>"
       : "";
 
   foundInFolders.forEach((noise) => {
-    // If it's a new discovery, auto-exclude it. If we saw it before, keep previous state.
     if (!activeSmartExcludes.has(noise) && !previouslyChecked.has(noise)) {
       activeSmartExcludes.add(noise);
     }
 
     const isChecked = activeSmartExcludes.has(noise);
-
     const label = document.createElement("label");
     label.style =
       "background: #e0e0e0; padding: 4px 10px; border-radius: 15px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px; border: 1px solid #ccc; margin-bottom: 5px;";
@@ -142,43 +105,39 @@ function detectNoise() {
   });
 }
 
-/**
- * Helper to find noise items in subdirectories
- * @param {string} dir Current directory
- * @param {Set} foundSet Set to collect found noise names
- * @param {number} depth Current recursion depth
- * @param {number} maxDepth Stop scanning after X levels
- */
-function scanForNoise(dir, foundSet, depth, maxDepth) {
+async function scanForNoise(dir, foundSet, depth, maxDepth) {
   if (depth > maxDepth) return;
-
   try {
-    const items = fs.readdirSync(dir);
-    items.forEach((item) => {
-      // If the item name is in our COMMON_NOISE list, add it
+    const items = await fs.readdir(dir);
+    for (const item of items) {
       if (COMMON_NOISE.includes(item)) {
         foundSet.add(item);
       }
-
-      // If it's a directory, dive deeper (unless it's already a noise folder)
       const fullPath = path.join(dir, item);
-      if (!COMMON_NOISE.includes(item) && fs.statSync(fullPath).isDirectory()) {
-        scanForNoise(fullPath, foundSet, depth + 1, maxDepth);
+      try {
+        const stat = await fs.stat(fullPath);
+        if (stat.isDirectory() && !COMMON_NOISE.includes(item)) {
+          await scanForNoise(fullPath, foundSet, depth + 1, maxDepth);
+        }
+      } catch (e) {
+        /* skip individual file errors */
       }
-    });
+    }
   } catch (e) {
-    // Silence errors for system/protected folders
+    /* skip directory access errors */
   }
 }
+
+// --- Folder Management ---
 
 window.toggleSmartExclude = (name, isChecked) => {
   if (isChecked) activeSmartExcludes.add(name);
   else activeSmartExcludes.delete(name);
 };
 
-window.toggleFolder = (index) => {
+window.toggleFolder = async (index) => {
   selectedFolders[index].enabled = !selectedFolders[index].enabled;
-  detectNoise(); // Refresh smart excludes based on new selection
+  await detectNoise();
 };
 
 window.removeFolder = (index) => {
@@ -205,76 +164,36 @@ document.getElementById("clearBtn").addEventListener("click", () => {
   document.getElementById("textContent").value = "";
 });
 
-// --- Validation Logic ---
-
-async function validateFiles(files) {
-  if (files.length === 0) {
-    alert("No files found to process.");
-    return false;
-  }
-
-  if (files.length > 200) {
-    const choice = await ipcRenderer.invoke(
-      "show-warning",
-      `Large task: ${files.length} files detected. This might take a moment.`,
-    );
-    if (choice === 1) return false;
-  }
-
-  for (const f of files) {
-    try {
-      const stats = fs.statSync(f);
-      if (stats.size > 1024 * 1024) {
-        // 1MB Limit
-        const choice = await ipcRenderer.invoke(
-          "show-warning",
-          `Large file detected: ${path.basename(f)} (>1MB). Large files can freeze the UI.`,
-        );
-        if (choice === 1) return false;
-        break;
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-  return true;
-}
-
 // --- Core File Logic ---
 
-function getFiles() {
+async function getFiles() {
   const manualExcludes = document
     .getElementById("excludeInput")
     .value.split(",")
     .map((s) => s.trim())
     .filter((s) => s !== "");
 
-  // Merge detected smart excludes with user-typed excludes
   const allExcludes = [...activeSmartExcludes, ...manualExcludes];
-
   let allFiles = [];
-  selectedFolders
-    .filter((f) => f.enabled)
-    .forEach((folderObj) => {
-      walkSync(folderObj.path, allFiles, allExcludes);
-    });
+
+  for (const folderObj of selectedFolders.filter((f) => f.enabled)) {
+    await walk(folderObj.path, allFiles, allExcludes);
+  }
   return allFiles;
 }
 
-function walkSync(dir, filelist = [], excludes = []) {
+async function walk(dir, filelist = [], excludes = []) {
   try {
-    const files = fs.readdirSync(dir);
-    files.forEach((file) => {
-      // Check if directory or file name is in the exclude list
-      if (excludes.includes(file)) return;
+    const files = await fs.readdir(dir);
+    for (const file of files) {
+      if (excludes.includes(file)) continue;
 
       const filePath = path.join(dir, file);
-      const stat = fs.statSync(filePath);
+      const stat = await fs.stat(filePath);
 
       if (stat.isDirectory()) {
-        walkSync(filePath, filelist, excludes);
+        await walk(filePath, filelist, excludes);
       } else {
-        // Skip common binary/image extensions automatically for safety
         const ext = path.extname(file).toLowerCase();
         const binaryExts = [
           ".png",
@@ -286,12 +205,13 @@ function walkSync(dir, filelist = [], excludes = []) {
           ".exe",
           ".dll",
           ".pyc",
+          ".ico",
         ];
         if (!binaryExts.includes(ext)) {
           filelist.push(filePath);
         }
       }
-    });
+    }
   } catch (e) {
     console.error("Walk error:", e);
   }
@@ -300,28 +220,35 @@ function walkSync(dir, filelist = [], excludes = []) {
 // --- Button Actions ---
 
 document.getElementById("listBtn").addEventListener("click", async () => {
-  const files = getFiles();
-  if (await validateFiles(files)) {
-    document.getElementById("textContent").value =
-      `Total Files: ${files.length}\n\n` + files.join("\n");
-  }
+  setLoading(true, "Scanning folders...");
+  const files = await getFiles();
+  setLoading(false);
+
+  document.getElementById("textContent").value =
+    `Total Files: ${files.length}\n\n` + files.join("\n");
 });
 
 document.getElementById("concatBtn").addEventListener("click", async () => {
-  const files = getFiles();
-  if (!(await validateFiles(files))) return;
+  const files = await getFiles();
+  if (files.length === 0) return alert("No files found.");
 
-  let combined = "";
-  files.forEach((f) => {
-    try {
-      const content = fs.readFileSync(f, "utf8");
-      combined += `\n\n===== ${f} =====\n\n${content}`;
-    } catch (e) {
-      combined += `\n\n[Error reading ${f}]\n`;
+  setLoading(true, `Reading ${files.length} files...`);
+
+  // Small timeout allows the UI to render the spinner before the loop starts
+  setTimeout(async () => {
+    let combined = "";
+    for (const f of files) {
+      try {
+        const content = await fs.readFile(f, "utf8");
+        combined += `\n\n===== ${f} =====\n\n${content}`;
+      } catch (e) {
+        combined += `\n\n[Error reading ${f}]\n`;
+      }
     }
-  });
-  document.getElementById("textContent").value =
-    combined || "No readable content found.";
+    document.getElementById("textContent").value =
+      combined || "No readable content found.";
+    setLoading(false);
+  }, 100);
 });
 
 document.getElementById("copyBtn").addEventListener("click", () => {
@@ -331,9 +258,10 @@ document.getElementById("copyBtn").addEventListener("click", () => {
   text.select();
   document.execCommand("copy");
 
-  const originalText = document.getElementById("copyBtn").innerText;
-  document.getElementById("copyBtn").innerText = "Copied!";
+  const btn = document.getElementById("copyBtn");
+  const originalText = btn.innerText;
+  btn.innerText = "Copied!";
   setTimeout(() => {
-    document.getElementById("copyBtn").innerText = originalText;
+    btn.innerText = originalText;
   }, 2000);
 });
