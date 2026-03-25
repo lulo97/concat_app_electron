@@ -8,41 +8,43 @@ let activeSmartExcludes = new Set();
 let abortController = null; // Used to stop the loops
 
 const COMMON_NOISE = [
-  "node_modules",
-  ".git",
-  ".svn",
-  ".hg",
-  ".DS_Store",
-  "thumbs.db",
-  ".env",
-  ".env.local",
-  "dist",
-  "build",
-  "out",
-  ".next",
-  ".nuxt",
-  ".cache",
-  "package-lock.json",
-  "yarn.lock",
-  "pnpm-lock.yaml",
-  "bower_components",
-  "venv",
-  ".venv",
-  "env",
-  "__pycache__",
-  "bin",
-  "obj",
-  ".vs",
-  ".vscode",
-  "target",
-  ".gradle",
-  "logs",
-  "temp",
-  "tmp",
-  "*.gguf", // Added
-  "*.bin", // Added
-  "*.onnx", // Added
-  "*.weights", // Added
+  // --- Version Control & OS ---
+  ".git", ".svn", ".hg", ".DS_Store", "thumbs.db", ".gitignore", ".gitattributes",
+
+  // --- Package Managers ---
+  "node_modules", "bower_components", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", 
+  "composer.lock", "Cargo.lock", "Gemfile.lock",
+
+  // --- Build Outputs & Caches ---
+  "dist", "build", "out", ".next", ".nuxt", ".svelte-kit", ".astro", ".remix", ".docusaurus",
+  "target", "bin", "obj", ".gradle", ".cache", ".turbo", ".parcel-cache", "storybook-static",
+
+  // --- Environment & Secrets ---
+  ".env", ".env.local", ".env.development", ".env.production", ".env.test", 
+  "*.pem", "*.crt", "*.key", "*.pub",
+
+  // --- Language/Environment Specific ---
+  "venv", ".venv", "env", "__pycache__", ".pytest_cache", "go.sum", 
+  ".vs", ".vscode", ".idea", "nest-cli.json", "tsconfig.json", "tsconfig.build.json",
+  "tsconfig.node.json", "tsconfig.app.json", ".angular",
+
+  // --- Testing & Coverage ---
+  "coverage", ".nyc_output", "test-results", "playwright-report", "cypress/screenshots", 
+  "cypress/videos", ".eslintcache", ".stylelintcache",
+
+  // --- Logs & Temp ---
+  "logs", "*.log", "npm-debug.log*", "yarn-debug.log*", "yarn-error.log*", 
+  "temp", "tmp", ".temp", ".tmp",
+
+  // --- Media & Heavy Assets ---
+  "*.gguf", "*.bin", "*.onnx", "*.weights", "*.svg", "*.png", "*.jpg", "*.jpeg", "*.gif", 
+  "*.pdf", "*.mp4", "*.webm",
+
+  // --- Database & Local Storage ---
+  "*.db", "*.sqlite", "*.db-shm", "*.db-wal", ".prisma",
+
+  // --- Documentation & Project Meta ---
+  "README.md", "LICENSE", "CONTRIBUTING.md", "project-structure.txt", ".github"
 ];
 
 // --- UI Helpers ---
