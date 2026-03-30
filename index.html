@@ -304,6 +304,21 @@
       #cancelBtn:hover {
         background: var(--danger-hover);
       }
+
+      /* Feedback for the copy button */
+      #copyBtn {
+        transition:
+          transform 0.1s,
+          background-color 0.2s;
+      }
+
+      #copyBtn:active {
+        transform: scale(0.95);
+      }
+
+      #copyBtn.copied {
+        background-color: #10b981 !important; /* Success Green */
+      }
     </style>
   </head>
   <body>

@@ -9,42 +9,119 @@ let abortController = null; // Used to stop the loops
 
 const COMMON_NOISE = [
   // --- Version Control & OS ---
-  ".git", ".svn", ".hg", ".DS_Store", "thumbs.db", ".gitignore", ".gitattributes",
+  ".git",
+  ".svn",
+  ".hg",
+  ".DS_Store",
+  "thumbs.db",
+  ".gitignore",
+  ".gitattributes",
 
   // --- Package Managers ---
-  "node_modules", "bower_components", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", 
-  "composer.lock", "Cargo.lock", "Gemfile.lock",
+  "node_modules",
+  "bower_components",
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+  "composer.lock",
+  "Cargo.lock",
+  "Gemfile.lock",
 
   // --- Build Outputs & Caches ---
-  "dist", "build", "out", ".next", ".nuxt", ".svelte-kit", ".astro", ".remix", ".docusaurus",
-  "target", "bin", "obj", ".gradle", ".cache", ".turbo", ".parcel-cache", "storybook-static",
+  "dist",
+  "build",
+  "out",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".astro",
+  ".remix",
+  ".docusaurus",
+  "target",
+  "bin",
+  "obj",
+  ".gradle",
+  ".cache",
+  ".turbo",
+  ".parcel-cache",
+  "storybook-static",
 
   // --- Environment & Secrets ---
-  ".env", ".env.local", ".env.development", ".env.production", ".env.test", 
-  "*.pem", "*.crt", "*.key", "*.pub",
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.production",
+  ".env.test",
+  "*.pem",
+  "*.crt",
+  "*.key",
+  "*.pub",
 
   // --- Language/Environment Specific ---
-  "venv", ".venv", "env", "__pycache__", ".pytest_cache", "go.sum", 
-  ".vs", ".vscode", ".idea", "nest-cli.json", "tsconfig.json", "tsconfig.build.json",
-  "tsconfig.node.json", "tsconfig.app.json", ".angular",
+  "venv",
+  ".venv",
+  "env",
+  "__pycache__",
+  ".pytest_cache",
+  "go.sum",
+  ".vs",
+  ".vscode",
+  ".idea",
+  "nest-cli.json",
+  "tsconfig.json",
+  "tsconfig.build.json",
+  "tsconfig.node.json",
+  "tsconfig.app.json",
+  ".angular",
 
   // --- Testing & Coverage ---
-  "coverage", ".nyc_output", "test-results", "playwright-report", "cypress/screenshots", 
-  "cypress/videos", ".eslintcache", ".stylelintcache",
+  "coverage",
+  ".nyc_output",
+  "test-results",
+  "playwright-report",
+  "cypress/screenshots",
+  "cypress/videos",
+  ".eslintcache",
+  ".stylelintcache",
 
   // --- Logs & Temp ---
-  "logs", "*.log", "npm-debug.log*", "yarn-debug.log*", "yarn-error.log*", 
-  "temp", "tmp", ".temp", ".tmp",
+  "logs",
+  "*.log",
+  "npm-debug.log*",
+  "yarn-debug.log*",
+  "yarn-error.log*",
+  "temp",
+  "tmp",
+  ".temp",
+  ".tmp",
 
   // --- Media & Heavy Assets ---
-  "*.gguf", "*.bin", "*.onnx", "*.weights", "*.svg", "*.png", "*.jpg", "*.jpeg", "*.gif", 
-  "*.pdf", "*.mp4", "*.webm",
+  "*.gguf",
+  "*.bin",
+  "*.onnx",
+  "*.weights",
+  "*.svg",
+  "*.png",
+  "*.jpg",
+  "*.jpeg",
+  "*.gif",
+  "*.pdf",
+  "*.mp4",
+  "*.webm",
 
   // --- Database & Local Storage ---
-  "*.db", "*.sqlite", "*.db-shm", "*.db-wal", ".prisma",
+  "*.db",
+  "*.sqlite",
+  "*.db-shm",
+  "*.db-wal",
+  ".prisma",
 
   // --- Documentation & Project Meta ---
-  "README.md", "LICENSE", "CONTRIBUTING.md", "project-structure.txt", ".github"
+  "README.md",
+  "LICENSE",
+  "CONTRIBUTING.md",
+  "project-structure.txt",
+  ".github",
 ];
 
 // --- UI Helpers ---
@@ -323,17 +400,37 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
   }
 });
 
-document.getElementById("copyBtn").addEventListener("click", () => {
-  const text = document.getElementById("textContent");
-  if (!text.value) return;
-  text.select();
-  document.execCommand("copy");
-  const btn = document.getElementById("copyBtn");
-  const originalText = btn.innerText;
-  btn.innerText = "Copied!";
-  setTimeout(() => {
-    btn.innerText = originalText;
-  }, 2000);
+let copyFeedbackTimeout;
+
+document.getElementById("copyBtn").addEventListener("click", async () => {
+  const textEl = document.getElementById("textContent");
+  const textToCopy = textEl.value;
+
+  if (!textToCopy) return;
+
+  try {
+    // Use the modern Clipboard API
+    await navigator.clipboard.writeText(textToCopy);
+
+    const btn = document.getElementById("copyBtn");
+
+    // 1. Reset UI state immediately for rapid clicks
+    btn.classList.remove("copied");
+    btn.innerText = "Copied! ✓";
+    btn.classList.add("copied");
+
+    // 2. Clear existing timeout so the "Copied" message
+    // stays for 2 seconds AFTER the last click
+    clearTimeout(copyFeedbackTimeout);
+
+    copyFeedbackTimeout = setTimeout(() => {
+      btn.innerText = "Copy Full Content";
+      btn.classList.remove("copied");
+    }, 2000);
+  } catch (err) {
+    console.error("Failed to copy text: ", err);
+    alert("Failed to copy to clipboard.");
+  }
 });
 
 function updateMetadata(text) {
