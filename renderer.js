@@ -1,6 +1,7 @@
 const { ipcRenderer } = require("electron");
 const fs = require("fs").promises;
 const path = require("path");
+const { clipboard } = require("electron"); // <-- add this
 
 // --- State Management ---
 let selectedFolders = [];
@@ -408,33 +409,56 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
 let copyFeedbackTimeout;
 
 document.getElementById("copyBtn").addEventListener("click", async () => {
-  const textEl = document.getElementById("textContent");
-  const textToCopy = textEl.value;
+  if (!selectedFolders.some((f) => f.enabled)) {
+    alert("Please add at least one folder first.");
+    return;
+  }
 
-  if (!textToCopy) return;
+  abortController = new AbortController();
+  const signal = abortController.signal;
+
+  setLoading(true, "Refreshing files before copy...");
 
   try {
-    // Use the modern Clipboard API
-    await navigator.clipboard.writeText(textToCopy);
+    const { aborted, files, combined, newest } = await rebuildContent(signal);
+    if (aborted) return;
+
+    if (files.length === 0) {
+      alert("No files found.");
+      return;
+    }
+
+    const finalContent = combined || "No readable content found.";
+    clipboard.writeText(finalContent);
+
+    document.getElementById("textContent").value = finalContent;
+    updateMetadata(finalContent);
 
     const btn = document.getElementById("copyBtn");
-
-    // 1. Reset UI state immediately for rapid clicks
     btn.classList.remove("copied");
     btn.innerText = "Copied! ✓";
     btn.classList.add("copied");
 
-    // 2. Clear existing timeout so the "Copied" message
-    // stays for 2 seconds AFTER the last click
     clearTimeout(copyFeedbackTimeout);
-
     copyFeedbackTimeout = setTimeout(() => {
       btn.innerText = "Copy Full Content";
       btn.classList.remove("copied");
     }, 2000);
+
+    if (newest) {
+      const newestName = path.basename(newest.path);
+      const newestTime = formatTimestamp(new Date(newest.mtimeMs));
+      alert(
+        `Files copied with newest timestamp ${newestTime} in file ${newestName}.`,
+      );
+    } else {
+      alert("Files copied.");
+    }
   } catch (err) {
     console.error("Failed to copy text: ", err);
     alert("Failed to copy to clipboard.");
+  } finally {
+    setLoading(false);
   }
 });
 
@@ -466,4 +490,46 @@ function updateMetadata(text) {
   document.getElementById("metaWords").innerText = words.toLocaleString();
   document.getElementById("metaSize").innerText = sizeStr;
   metaInfo.style.display = "flex";
+}
+
+function formatTimestamp(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+async function rebuildContent(signal) {
+  const files = await getFiles(signal);
+  if (signal.aborted)
+    return { aborted: true, files: [], combined: "", newest: null };
+
+  let combined = "";
+  let newest = null;
+
+  for (let i = 0; i < files.length; i++) {
+    if (signal.aborted) return { aborted: true, files, combined, newest };
+
+    const f = files[i];
+    const fileName = path.basename(f);
+    const stat = await fs.stat(f);
+
+    if (!newest || stat.mtimeMs > newest.mtimeMs) {
+      newest = { path: f, mtimeMs: stat.mtimeMs };
+    }
+
+    const percent = Math.round(((i + 1) / files.length) * 100);
+    document.getElementById("loadingText").innerHTML = `
+      <div style="font-weight: bold; color: #3498db;">Processing ${percent}%</div>
+      <div style="font-size: 11px; color: #666; margin-top: 5px;">Current: ${fileName}</div>
+    `;
+
+    try {
+      if (i % 5 === 0) await new Promise((r) => setTimeout(r, 0));
+      const content = await fs.readFile(f, "utf8");
+      combined += `\n\n===== ${f} =====\n\n${content}`;
+    } catch (e) {
+      combined += `\n\n[Error reading ${f}]: ${e.message}\n`;
+    }
+  }
+
+  return { aborted: false, files, combined, newest };
 }

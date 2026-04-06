@@ -49,4 +49,10 @@ ipcMain.handle('show-large-file-warning', async (event, fileName, fileSizeMB) =>
   return result.response; // 0: Continue, 1: Skip, 2: Cancel
 });
 
+// Put Electron session/cache data somewhere writable
+app.setPath('sessionData', path.join(app.getPath('userData'), 'sessionData'));
+
+// Optional: if your app does not need HTTP caching at all
+app.commandLine.appendSwitch('disable-http-cache');
+
 app.whenReady().then(createWindow);
