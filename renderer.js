@@ -10,48 +10,146 @@ let abortController = null; // Used to stop the loops
 
 const binaryExts = [
   // --- Images & Icons ---
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".tiff", ".ico", ".svg",
-  
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".tiff",
+  ".ico",
+  ".svg",
+
   // --- Media (Audio/Video) ---
-  ".mp4", ".webm", ".mov", ".avi", ".mp3", ".wav", ".flac", ".ogg",
-  
+  ".mp4",
+  ".webm",
+  ".mov",
+  ".avi",
+  ".mp3",
+  ".wav",
+  ".flac",
+  ".ogg",
+
   // --- Documents & Archives ---
-  ".pdf", ".zip", ".tar", ".gz", ".7z", ".rar", ".jar", ".war",
-  
+  ".pdf",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".7z",
+  ".rar",
+  ".jar",
+  ".war",
+
   // --- Executables & System ---
-  ".exe", ".dll", ".so", ".dylib", ".bin", ".msi", ".pyc",
-  
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".bin",
+  ".msi",
+  ".pyc",
+
   // --- AI & Data Models ---
-  ".gguf", ".onnx", ".pt", ".pth", ".model", ".weights", ".safetensors",
-  
+  ".gguf",
+  ".onnx",
+  ".pt",
+  ".pth",
+  ".model",
+  ".weights",
+  ".safetensors",
+
   // --- Databases ---
-  ".db", ".sqlite", ".db-shm", ".db-wal",
-  
+  ".db",
+  ".sqlite",
+  ".db-shm",
+  ".db-wal",
+
   // --- Logs & Temp ---
-  ".log", ".tmp", ".temp", ".bak", ".swp",
-  
+  ".log",
+  ".tmp",
+  ".temp",
+  ".bak",
+  ".swp",
+
   // --- Certificates & Keys ---
-  ".pem", ".crt", ".key", ".pub", ".der"
+  ".pem",
+  ".crt",
+  ".key",
+  ".pub",
+  ".der",
 ];
 
 const COMMON_NOISE = [
   // --- Version Control & OS ---
-  ".git", ".svn", ".hg", ".DS_Store", "thumbs.db", ".gitignore", ".gitattributes", ".github",
+  ".git",
+  ".svn",
+  ".hg",
+  ".DS_Store",
+  "thumbs.db",
+  ".gitignore",
+  ".gitattributes",
+  ".github",
 
   // --- Package Managers ---
-  "node_modules", "bower_components", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "composer.lock", "Cargo.lock", "Gemfile.lock",
+  "node_modules",
+  "bower_components",
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+  "composer.lock",
+  "Cargo.lock",
+  "Gemfile.lock",
 
   // --- Build Outputs & Caches ---
-  "dist", "build", "out", "target", "bin", "obj", "coverage", ".next", ".nuxt", ".svelte-kit", ".astro", ".remix", ".cache", ".turbo", ".parcel-cache", "storybook-static", ".gradle",
+  "dist",
+  "build",
+  "out",
+  "target",
+  "bin",
+  "obj",
+  "coverage",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".astro",
+  ".remix",
+  ".cache",
+  ".turbo",
+  ".parcel-cache",
+  "storybook-static",
+  ".gradle",
 
   // --- Environment & Secrets ---
-  ".env", ".env.local", ".env.development", ".env.production", ".env.test",
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.production",
+  ".env.test",
 
   // --- IDEs & Tools ---
-  ".vs", ".vscode", ".idea", ".angular", "venv", ".venv", "env", "__pycache__", ".pytest_cache", ".eslintcache", ".stylelintcache",
+  ".vs",
+  ".vscode",
+  ".idea",
+  ".angular",
+  "venv",
+  ".venv",
+  "env",
+  "__pycache__",
+  ".pytest_cache",
+  ".eslintcache",
+  ".stylelintcache",
 
   // --- Configs & Meta ---
-  "nest-cli.json", "tsconfig.json", "tsconfig.build.json", "tsconfig.node.json", "tsconfig.app.json", "go.sum", "README.md", "LICENSE", "CONTRIBUTING.md", "project-structure.txt", ".prisma"
+  "nest-cli.json",
+  "tsconfig.json",
+  "tsconfig.build.json",
+  "tsconfig.node.json",
+  "tsconfig.app.json",
+  "go.sum",
+  "README.md",
+  "LICENSE",
+  "CONTRIBUTING.md",
+  "project-structure.txt",
+  ".prisma",
 ];
 
 // --- UI Helpers ---
@@ -323,7 +421,7 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
   abortController = new AbortController();
   const signal = abortController.signal;
 
-  setLoading(true, "Refreshing files before copy...");
+  setLoading(true, "Refreshing and verifying copy...");
 
   try {
     const { aborted, files, combined, newest } = await rebuildContent(signal);
@@ -335,8 +433,20 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
     }
 
     const finalContent = combined || "No readable content found.";
+
+    // 1. Perform the Write
     clipboard.writeText(finalContent);
 
+    // 2. Sanity/Assert Check: Read it back immediately
+    const verifyContent = clipboard.readText();
+
+    if (verifyContent !== finalContent) {
+      throw new Error(
+        "Clipboard verification failed: Content mismatch or clipboard access denied.",
+      );
+    }
+
+    // 3. Success UI Feedback
     document.getElementById("textContent").value = finalContent;
     updateMetadata(finalContent);
 
@@ -351,18 +461,26 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
       btn.classList.remove("copied");
     }, 2000);
 
+    // Final user notification
     if (newest) {
       const newestName = path.basename(newest.path);
       const newestTime = formatTimestamp(new Date(newest.mtimeMs));
       alert(
         `Files copied with newest timestamp ${newestTime} in file ${newestName}.`,
       );
-    } else {
-      alert("Files copied.");
     }
   } catch (err) {
-    console.error("Failed to copy text: ", err);
-    alert("Failed to copy to clipboard.");
+    console.error("Critical Copy Error: ", err);
+    alert(`Copy Failed: ${err.message}`);
+
+    // Visual error state for the button
+    const btn = document.getElementById("copyBtn");
+    btn.style.backgroundColor = "var(--danger)";
+    btn.innerText = "Copy Error!";
+    setTimeout(() => {
+      btn.style.backgroundColor = "";
+      btn.innerText = "Copy Full Content";
+    }, 3000);
   } finally {
     setLoading(false);
   }
