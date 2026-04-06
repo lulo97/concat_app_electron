@@ -94,6 +94,7 @@ const COMMON_NOISE = [
   "tmp",
   ".temp",
   ".tmp",
+  "cache",
 
   // --- Media & Heavy Assets ---
   "*.gguf",
@@ -108,6 +109,10 @@ const COMMON_NOISE = [
   "*.pdf",
   "*.mp4",
   "*.webm",
+  "*.wav",
+  "*.mp3",
+  "*.txt",
+  "*.json",
 
   // --- Database & Local Storage ---
   "*.db",
@@ -250,7 +255,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
 async function getFiles(signal) {
   const manualExcludes = document
     .getElementById("excludeInput")
-    .value.split(",")
+    .value.split(/[\n,]/)
     .map((s) => s.trim())
     .filter((s) => s !== "");
   const allExcludes = [...activeSmartExcludes, ...manualExcludes];

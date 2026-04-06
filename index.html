@@ -319,6 +319,26 @@
       #copyBtn.copied {
         background-color: #10b981 !important; /* Success Green */
       }
+
+      #excludeInput {
+        width: 100%;
+        min-height: 110px;
+        max-height: 180px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        font-family: inherit;
+        line-height: 1.5;
+        outline: none;
+        resize: vertical;
+        overflow-y: auto;
+      }
+
+      #excludeInput:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      }
     </style>
   </head>
   <body>
@@ -344,11 +364,11 @@
 
         <div>
           <span class="section-label">Manual Excludes (CSV)</span>
-          <input
-            type="text"
+          <textarea
             id="excludeInput"
             placeholder="e.g. temp, cache, logs"
-          />
+            rows="5"
+          ></textarea>
         </div>
 
         <div class="action-bar">

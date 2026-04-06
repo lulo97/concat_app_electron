@@ -1,19 +1,22 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 function createWindow() {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
   const win = new BrowserWindow({
-    width: 1000,
-    height: 800,
+    width: Math.floor(width * 0.9),
+    height: Math.floor(height * 0.8),
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false, // For simplicity in this example
+      contextIsolation: false,
     }
   });
+
+  win.center(); // optional: center the window
   win.loadFile('index.html');
 }
-
 // Handle the Multi-Folder Selection
 ipcMain.handle('select-folders', async () => {
   const result = await dialog.showOpenDialog({
