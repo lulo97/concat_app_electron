@@ -8,126 +8,50 @@ let selectedFolders = [];
 let activeSmartExcludes = new Set();
 let abortController = null; // Used to stop the loops
 
+const binaryExts = [
+  // --- Images & Icons ---
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".tiff", ".ico", ".svg",
+  
+  // --- Media (Audio/Video) ---
+  ".mp4", ".webm", ".mov", ".avi", ".mp3", ".wav", ".flac", ".ogg",
+  
+  // --- Documents & Archives ---
+  ".pdf", ".zip", ".tar", ".gz", ".7z", ".rar", ".jar", ".war",
+  
+  // --- Executables & System ---
+  ".exe", ".dll", ".so", ".dylib", ".bin", ".msi", ".pyc",
+  
+  // --- AI & Data Models ---
+  ".gguf", ".onnx", ".pt", ".pth", ".model", ".weights", ".safetensors",
+  
+  // --- Databases ---
+  ".db", ".sqlite", ".db-shm", ".db-wal",
+  
+  // --- Logs & Temp ---
+  ".log", ".tmp", ".temp", ".bak", ".swp",
+  
+  // --- Certificates & Keys ---
+  ".pem", ".crt", ".key", ".pub", ".der"
+];
+
 const COMMON_NOISE = [
   // --- Version Control & OS ---
-  ".git",
-  ".svn",
-  ".hg",
-  ".DS_Store",
-  "thumbs.db",
-  ".gitignore",
-  ".gitattributes",
+  ".git", ".svn", ".hg", ".DS_Store", "thumbs.db", ".gitignore", ".gitattributes", ".github",
 
   // --- Package Managers ---
-  "node_modules",
-  "bower_components",
-  "package-lock.json",
-  "yarn.lock",
-  "pnpm-lock.yaml",
-  "composer.lock",
-  "Cargo.lock",
-  "Gemfile.lock",
+  "node_modules", "bower_components", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "composer.lock", "Cargo.lock", "Gemfile.lock",
 
   // --- Build Outputs & Caches ---
-  "dist",
-  "build",
-  "out",
-  ".next",
-  ".nuxt",
-  ".svelte-kit",
-  ".astro",
-  ".remix",
-  ".docusaurus",
-  "target",
-  "bin",
-  "obj",
-  ".gradle",
-  ".cache",
-  ".turbo",
-  ".parcel-cache",
-  "storybook-static",
+  "dist", "build", "out", "target", "bin", "obj", "coverage", ".next", ".nuxt", ".svelte-kit", ".astro", ".remix", ".cache", ".turbo", ".parcel-cache", "storybook-static", ".gradle",
 
   // --- Environment & Secrets ---
-  ".env",
-  ".env.local",
-  ".env.development",
-  ".env.production",
-  ".env.test",
-  "*.pem",
-  "*.crt",
-  "*.key",
-  "*.pub",
+  ".env", ".env.local", ".env.development", ".env.production", ".env.test",
 
-  // --- Language/Environment Specific ---
-  "venv",
-  ".venv",
-  "env",
-  "__pycache__",
-  ".pytest_cache",
-  "go.sum",
-  ".vs",
-  ".vscode",
-  ".idea",
-  "nest-cli.json",
-  "tsconfig.json",
-  "tsconfig.build.json",
-  "tsconfig.node.json",
-  "tsconfig.app.json",
-  ".angular",
+  // --- IDEs & Tools ---
+  ".vs", ".vscode", ".idea", ".angular", "venv", ".venv", "env", "__pycache__", ".pytest_cache", ".eslintcache", ".stylelintcache",
 
-  // --- Testing & Coverage ---
-  "coverage",
-  ".nyc_output",
-  "test-results",
-  "playwright-report",
-  "cypress/screenshots",
-  "cypress/videos",
-  ".eslintcache",
-  ".stylelintcache",
-
-  // --- Logs & Temp ---
-  "logs",
-  "*.log",
-  "npm-debug.log*",
-  "yarn-debug.log*",
-  "yarn-error.log*",
-  "temp",
-  "tmp",
-  ".temp",
-  ".tmp",
-  "cache",
-
-  // --- Media & Heavy Assets ---
-  "*.gguf",
-  "*.bin",
-  "*.onnx",
-  "*.weights",
-  "*.svg",
-  "*.png",
-  "*.jpg",
-  "*.jpeg",
-  "*.gif",
-  "*.pdf",
-  "*.mp4",
-  "*.webm",
-  "*.wav",
-  "*.mp3",
-  "*.txt",
-  "*.json",
-
-  // --- Database & Local Storage ---
-  "*.db",
-  "*.sqlite",
-  "*.db-shm",
-  "*.db-wal",
-  ".prisma",
-
-  // --- Documentation & Project Meta ---
-  "README.md",
-  "LICENSE",
-  "CONTRIBUTING.md",
-  "project-structure.txt",
-  ".github",
+  // --- Configs & Meta ---
+  "nest-cli.json", "tsconfig.json", "tsconfig.build.json", "tsconfig.node.json", "tsconfig.app.json", "go.sum", "README.md", "LICENSE", "CONTRIBUTING.md", "project-structure.txt", ".prisma"
 ];
 
 // --- UI Helpers ---
@@ -284,24 +208,6 @@ async function walk(dir, filelist = [], excludes = [], signal) {
         await walk(filePath, filelist, excludes, signal);
       } else {
         const ext = path.extname(file).toLowerCase();
-        const binaryExts = [
-          ".png",
-          ".jpg",
-          ".jpeg",
-          ".gif",
-          ".pdf",
-          ".zip",
-          ".exe",
-          ".dll",
-          ".pyc",
-          ".ico",
-          ".gguf",
-          ".bin",
-          ".onnx",
-          ".pt",
-          ".pth",
-          ".model", // Added binary/AI formats
-        ];
         if (!binaryExts.includes(ext)) {
           filelist.push(filePath);
         }
