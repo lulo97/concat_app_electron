@@ -6,9 +6,16 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "dev-build": "electron-builder --win --dir"
   },
   "build": {
+    "files": [
+      "main.js",
+      "renderer.js",
+      "index.html",
+      "!node_modules/**/*"
+    ],
     "appId": "com.yourname.concatapp",
     "productName": "FolderConcatenator",
     "win": {
