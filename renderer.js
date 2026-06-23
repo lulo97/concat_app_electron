@@ -1,155 +1,50 @@
 const { ipcRenderer } = require("electron");
 const fs = require("fs").promises;
+const fsSync = require("fs");
 const path = require("path");
-const { clipboard } = require("electron"); // <-- add this
+const { clipboard } = require("electron");
 
 // --- State Management ---
 let selectedFolders = [];
 let activeSmartExcludes = new Set();
+let excludedFileTypes = new Set(); // Extensions the user wants to EXCLUDE (e.g. ".css")
 let abortController = null; // Used to stop the loops
+
+const CONCATIGNORE_FILE = ".concatignore";
 
 const binaryExts = [
   // --- Images & Icons ---
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".webp",
-  ".tiff",
-  ".ico",
-  ".svg",
-
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".tiff", ".ico", ".svg",
   // --- Media (Audio/Video) ---
-  ".mp4",
-  ".webm",
-  ".mov",
-  ".avi",
-  ".mp3",
-  ".wav",
-  ".flac",
-  ".ogg",
-
+  ".mp4", ".webm", ".mov", ".avi", ".mp3", ".wav", ".flac", ".ogg",
   // --- Documents & Archives ---
-  ".pdf",
-  ".zip",
-  ".tar",
-  ".gz",
-  ".7z",
-  ".rar",
-  ".jar",
-  ".war",
-
+  ".pdf", ".zip", ".tar", ".gz", ".7z", ".rar", ".jar", ".war",
   // --- Executables & System ---
-  ".exe",
-  ".dll",
-  ".so",
-  ".dylib",
-  ".bin",
-  ".msi",
-  ".pyc",
-
+  ".exe", ".dll", ".so", ".dylib", ".bin", ".msi", ".pyc",
   // --- AI & Data Models ---
-  ".gguf",
-  ".onnx",
-  ".pt",
-  ".pth",
-  ".model",
-  ".weights",
-  ".safetensors",
-
+  ".gguf", ".onnx", ".pt", ".pth", ".model", ".weights", ".safetensors",
   // --- Databases ---
-  ".db",
-  ".sqlite",
-  ".db-shm",
-  ".db-wal",
-
+  ".db", ".sqlite", ".db-shm", ".db-wal",
   // --- Logs & Temp ---
-  ".log",
-  ".tmp",
-  ".temp",
-  ".bak",
-  ".swp",
-
+  ".log", ".tmp", ".temp", ".bak", ".swp",
   // --- Certificates & Keys ---
-  ".pem",
-  ".crt",
-  ".key",
-  ".pub",
-  ".der",
+  ".pem", ".crt", ".key", ".pub", ".der",
 ];
 
 const COMMON_NOISE = [
-  // --- Version Control & OS ---
-  ".git",
-  ".svn",
-  ".hg",
-  ".DS_Store",
-  "thumbs.db",
-  ".gitignore",
-  ".gitattributes",
-  ".github",
-
-  // --- Package Managers ---
-  "node_modules",
-  "bower_components",
-  "package-lock.json",
-  "yarn.lock",
-  "pnpm-lock.yaml",
-  "composer.lock",
-  "Cargo.lock",
-  "Gemfile.lock",
-
-  // --- Build Outputs & Caches ---
-  "dist",
-  "build",
-  "out",
-  "target",
-  "bin",
-  "obj",
-  "coverage",
-  ".next",
-  ".nuxt",
-  ".svelte-kit",
-  ".astro",
-  ".remix",
-  ".cache",
-  ".turbo",
-  ".parcel-cache",
-  "storybook-static",
-  ".gradle",
-
-  // --- Environment & Secrets ---
-  ".env",
-  ".env.local",
-  ".env.development",
-  ".env.production",
-  ".env.test",
-
-  // --- IDEs & Tools ---
-  ".vs",
-  ".vscode",
-  ".idea",
-  ".angular",
-  "venv",
-  ".venv",
-  "env",
-  "__pycache__",
-  ".pytest_cache",
-  ".eslintcache",
-  ".stylelintcache",
-
-  // --- Configs & Meta ---
-  "nest-cli.json",
-  "tsconfig.json",
-  "tsconfig.build.json",
-  "tsconfig.node.json",
-  "tsconfig.app.json",
-  "go.sum",
-  "README.md",
-  "LICENSE",
-  "CONTRIBUTING.md",
-  "project-structure.txt",
-  ".prisma",
+  ".git", ".svn", ".hg", ".DS_Store", "thumbs.db", ".gitignore",
+  ".gitattributes", ".github",
+  "node_modules", "bower_components", "package-lock.json", "yarn.lock",
+  "pnpm-lock.yaml", "composer.lock", "Cargo.lock", "Gemfile.lock",
+  "dist", "build", "out", "target", "bin", "obj", "coverage",
+  ".next", ".nuxt", ".svelte-kit", ".astro", ".remix", ".cache",
+  ".turbo", ".parcel-cache", "storybook-static", ".gradle",
+  ".env", ".env.local", ".env.development", ".env.production", ".env.test",
+  ".vs", ".vscode", ".idea", ".angular", "venv", ".venv", "env",
+  "__pycache__", ".pytest_cache", ".eslintcache", ".stylelintcache",
+  "nest-cli.json", "tsconfig.json", "tsconfig.build.json",
+  "tsconfig.node.json", "tsconfig.app.json", "go.sum",
+  "README.md", "LICENSE", "CONTRIBUTING.md", "project-structure.txt", ".prisma",
 ];
 
 // --- UI Helpers ---
@@ -163,10 +58,9 @@ function setLoading(show, text = "Processing...") {
   }
 }
 
-// Cancel Button Logic
 document.getElementById("cancelBtn").addEventListener("click", () => {
   if (abortController) {
-    abortController.abort(); // Sends the signal to stop
+    abortController.abort();
     setLoading(false);
   }
 });
@@ -178,12 +72,12 @@ async function updateFolderUI() {
     const li = document.createElement("li");
     li.className = "folder-item";
     li.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <input type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggleFolder(${index})">
-                <span style="word-break: break-all;">${item.path}</span>
-            </div>
-            <button class="remove-btn" onclick="removeFolder(${index})">Delete</button>
-        `;
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <input type="checkbox" ${item.enabled ? "checked" : ""} onchange="toggleFolder(${index})">
+        <span style="word-break: break-all;">${item.path}</span>
+      </div>
+      <button class="remove-btn" onclick="removeFolder(${index})">Delete</button>
+    `;
     list.appendChild(li);
   });
   await detectNoise();
@@ -217,6 +111,8 @@ async function detectNoise() {
     label.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleSmartExclude('${noise}', this.checked)"> ${noise}`;
     container.appendChild(label);
   });
+
+  await detectFileTypes();
 }
 
 async function scanForNoise(dir, foundSet, depth, maxDepth) {
@@ -235,6 +131,207 @@ async function scanForNoise(dir, foundSet, depth, maxDepth) {
     }
   } catch (e) {}
 }
+
+// --- File Type Detection ---
+
+async function detectFileTypes() {
+  const container = document.getElementById("fileTypeFilter");
+  if (!container) return;
+
+  const foundExts = new Set();
+  for (const folderObj of selectedFolders.filter((f) => f.enabled)) {
+    await scanForExtensions(folderObj.path, foundExts, 0, 4);
+  }
+
+  if (foundExts.size === 0) {
+    container.innerHTML = "<span style='font-size:12px; color: var(--text-muted);'>No folders selected yet.</span>";
+    return;
+  }
+
+  const sortedExts = [...foundExts].sort();
+  container.innerHTML = "";
+
+  const header = document.createElement("div");
+  header.className = "ft-header";
+  header.innerHTML = `
+    <strong style="font-size:12px;">Toggle extensions:</strong>
+    <div class="ft-header-actions">
+      <button class="ft-action-link" onclick="selectAllFileTypes()">Include All</button>
+      <button class="ft-action-link" onclick="excludeAllFileTypes()">Exclude All</button>
+    </div>
+  `;
+  container.appendChild(header);
+
+  sortedExts.forEach((ext) => {
+    const isExcluded = excludedFileTypes.has(ext);
+    const label = document.createElement("label");
+    label.className = isExcluded ? "excluded" : "";
+    label.title = isExcluded ? `${ext} files are excluded` : `${ext} files are included`;
+    label.innerHTML = `
+      <input type="checkbox" ${isExcluded ? "" : "checked"}
+        onchange="toggleFileTypeExclude('${ext}', this.checked)">
+      ${ext}
+    `;
+    container.appendChild(label);
+  });
+}
+
+async function scanForExtensions(dir, extSet, depth, maxDepth) {
+  if (depth > maxDepth) return;
+  try {
+    const manualExcludes = document
+      .getElementById("excludeInput")
+      .value.split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter((s) => s !== "");
+    const allExcludes = [...activeSmartExcludes, ...manualExcludes];
+
+    const items = await fs.readdir(dir);
+    for (const item of items) {
+      if (allExcludes.includes(item)) continue;
+      const fullPath = path.join(dir, item);
+      try {
+        const stat = await fs.stat(fullPath);
+        if (stat.isDirectory()) {
+          await scanForExtensions(fullPath, extSet, depth + 1, maxDepth);
+        } else {
+          const ext = path.extname(item).toLowerCase();
+          if (ext && !binaryExts.includes(ext)) {
+            extSet.add(ext);
+          }
+        }
+      } catch (e) {}
+    }
+  } catch (e) {}
+}
+
+// --- File Type Toggle Handlers ---
+
+window.toggleFileTypeExclude = (ext, isChecked) => {
+  if (isChecked) excludedFileTypes.delete(ext);
+  else excludedFileTypes.add(ext);
+  detectFileTypes();
+};
+
+window.selectAllFileTypes = () => {
+  excludedFileTypes.clear();
+  detectFileTypes();
+};
+
+window.excludeAllFileTypes = () => {
+  const labels = document.querySelectorAll("#fileTypeFilter label");
+  labels.forEach((label) => {
+    const ext = label.textContent.trim();
+    if (ext) excludedFileTypes.add(ext);
+  });
+  detectFileTypes();
+};
+
+// --- .concatignore Save / Load ---
+
+/**
+ * Build the config object from current UI state.
+ */
+function buildConfig() {
+  const manualExcludes = document
+    .getElementById("excludeInput")
+    .value.split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter((s) => s !== "");
+
+  return {
+    _comment: "Auto-generated by Concatenator.io — edit carefully.",
+    folders: selectedFolders.map((f) => ({ path: f.path, enabled: f.enabled })),
+    smartExcludes: [...activeSmartExcludes],
+    excludedFileTypes: [...excludedFileTypes],
+    manualExcludes,
+  };
+}
+
+/**
+ * Apply a loaded config object back to the UI state.
+ * Merges folders (avoids duplicates), replaces excludes.
+ */
+async function applyConfig(config) {
+  if (config.folders && Array.isArray(config.folders)) {
+    config.folders.forEach((entry) => {
+      if (!selectedFolders.some((f) => f.path === entry.path)) {
+        selectedFolders.push({ path: entry.path, enabled: entry.enabled !== false });
+      }
+    });
+  }
+  if (config.smartExcludes && Array.isArray(config.smartExcludes)) {
+    config.smartExcludes.forEach((s) => activeSmartExcludes.add(s));
+  }
+  if (config.excludedFileTypes && Array.isArray(config.excludedFileTypes)) {
+    config.excludedFileTypes.forEach((ext) => excludedFileTypes.add(ext));
+  }
+  if (config.manualExcludes && Array.isArray(config.manualExcludes)) {
+    const existingRaw = document.getElementById("excludeInput").value
+      .split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    const merged = [...new Set([...existingRaw, ...config.manualExcludes])];
+    document.getElementById("excludeInput").value = merged.join(", ");
+  }
+  await updateFolderUI();
+}
+
+/**
+ * Try to load .concatignore from a given folder path.
+ * Returns parsed config or null.
+ */
+async function tryLoadConcatIgnore(folderPath) {
+  const filePath = path.join(folderPath, CONCATIGNORE_FILE);
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    return JSON.parse(raw);
+  } catch (e) {
+    return null; // File doesn't exist or is invalid — silently skip
+  }
+}
+
+/**
+ * Save config button handler.
+ * If multiple folders are selected, ask the user which one to save into.
+ * If only one, save directly.
+ */
+document.getElementById("saveConfigBtn").addEventListener("click", async () => {
+  const enabledFolders = selectedFolders.filter((f) => f.enabled);
+
+  if (enabledFolders.length === 0) {
+    alert("Please add at least one folder before saving a config.");
+    return;
+  }
+
+  let targetFolder;
+
+  if (enabledFolders.length === 1) {
+    targetFolder = enabledFolders[0].path;
+  } else {
+    // Let user pick which folder to save the .concatignore into
+    const choice = await ipcRenderer.invoke("pick-config-folder", enabledFolders.map((f) => f.path));
+    if (choice === null || choice === undefined) return; // Cancelled
+    targetFolder = choice;
+  }
+
+  const configPath = path.join(targetFolder, CONCATIGNORE_FILE);
+  const config = buildConfig();
+
+  try {
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+    // Success feedback on button
+    const btn = document.getElementById("saveConfigBtn");
+    const original = btn.innerText;
+    btn.innerText = "Config Saved ✓";
+    btn.classList.add("saved");
+    setTimeout(() => {
+      btn.innerText = original;
+      btn.classList.remove("saved");
+    }, 2000);
+  } catch (err) {
+    alert(`Failed to save config: ${err.message}`);
+  }
+});
 
 // --- Folder Management ---
 
@@ -255,23 +352,70 @@ window.removeFolder = (index) => {
 
 document.getElementById("addBtn").addEventListener("click", async () => {
   const paths = await ipcRenderer.invoke("select-folders");
-  if (paths) {
-    paths.forEach((p) => {
+  if (paths && paths.length > 0) {
+    for (const p of paths) {
       if (!selectedFolders.some((f) => f.path === p)) {
         selectedFolders.push({ path: p, enabled: true });
       }
-    });
-    updateFolderUI();
+      // Auto-load .concatignore if it exists in this folder
+      const config = await tryLoadConcatIgnore(p);
+      if (config) {
+        await applyConfig(config);
+        // Brief toast to let the user know a config was loaded
+        showToast(`Loaded .concatignore from ${path.basename(p)}`);
+        return; // applyConfig already calls updateFolderUI
+      }
+    }
+    await updateFolderUI();
   }
 });
 
 document.getElementById("clearBtn").addEventListener("click", () => {
   selectedFolders = [];
   activeSmartExcludes.clear();
+  excludedFileTypes.clear();
   updateFolderUI();
   document.getElementById("textContent").value = "";
-  updateMetadata(""); // This will hide the meta bar
+  document.getElementById("excludeInput").value = "";
+  updateMetadata("");
 });
+
+// --- Toast Notification ---
+
+function showToast(message, duration = 3000) {
+  let toast = document.getElementById("toastNotification");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "toastNotification";
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 99999;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    `;
+    document.body.appendChild(toast);
+  }
+  toast.innerText = message;
+  toast.style.opacity = "1";
+  toast.style.transform = "translateX(-50%) translateY(0)";
+
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(-50%) translateY(10px)";
+  }, duration);
+}
 
 // --- Core File Logic ---
 
@@ -285,7 +429,7 @@ async function getFiles(signal) {
   let allFiles = [];
 
   for (const folderObj of selectedFolders.filter((f) => f.enabled)) {
-    if (signal.aborted) return []; // Stop if cancelled
+    if (signal.aborted) return [];
     await walk(folderObj.path, allFiles, allExcludes, signal);
   }
   return allFiles;
@@ -306,9 +450,9 @@ async function walk(dir, filelist = [], excludes = [], signal) {
         await walk(filePath, filelist, excludes, signal);
       } else {
         const ext = path.extname(file).toLowerCase();
-        if (!binaryExts.includes(ext)) {
-          filelist.push(filePath);
-        }
+        if (binaryExts.includes(ext)) continue;
+        if (excludedFileTypes.has(ext)) continue;
+        filelist.push(filePath);
       }
     }
   } catch (e) {}
@@ -319,12 +463,9 @@ async function walk(dir, filelist = [], excludes = [], signal) {
 document.getElementById("listBtn").addEventListener("click", async () => {
   abortController = new AbortController();
   setLoading(true, "Scanning folders...");
-
   const files = await getFiles(abortController.signal);
-
   setLoading(false);
   if (abortController.signal.aborted) return;
-
   document.getElementById("textContent").value =
     `Total Files: ${files.length}\n\n` + files.join("\n");
 });
@@ -354,17 +495,9 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
       const stat = await fs.stat(f);
       const fileSizeMB = stat.size / (1024 * 1024);
 
-      // --- Large File Check (> 1MB) ---
       if (fileSizeMB > 1) {
-        // Pause UI loading to show dialog
-        const choice = await ipcRenderer.invoke(
-          "show-large-file-warning",
-          fileName,
-          fileSizeMB,
-        );
-
+        const choice = await ipcRenderer.invoke("show-large-file-warning", fileName, fileSizeMB);
         if (choice === 1) {
-          // Skip & Add to Exclude
           const currentExcludes = excludeInput.value
             ? excludeInput.value.split(",").map((s) => s.trim())
             : [];
@@ -372,16 +505,13 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
             currentExcludes.push(fileName);
             excludeInput.value = currentExcludes.join(", ");
           }
-          continue; // Skip this file
+          continue;
         } else if (choice === 2) {
-          // Stop Process
           abortController.abort();
           break;
         }
-        // If choice is 0 (Continue), it just proceeds to read
       }
 
-      // Update UI Progress
       const percent = Math.round(((i + 1) / files.length) * 100);
       document.getElementById("loadingText").innerHTML = `
         <div style="font-weight: bold; color: #3498db;">Processing ${percent}%</div>
@@ -397,12 +527,9 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
       }
     }
 
-    // ... inside concatBtn listener, near the end:
     if (!signal.aborted) {
       const finalContent = combined || "No readable content found.";
       document.getElementById("textContent").value = finalContent;
-
-      // Trigger the metadata update here
       updateMetadata(finalContent);
     }
   } finally {
@@ -420,7 +547,6 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
 
   abortController = new AbortController();
   const signal = abortController.signal;
-
   setLoading(true, "Refreshing and verifying copy...");
 
   try {
@@ -433,20 +559,13 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
     }
 
     const finalContent = combined || "No readable content found.";
-
-    // 1. Perform the Write
     clipboard.writeText(finalContent);
-
-    // 2. Sanity/Assert Check: Read it back immediately
     const verifyContent = clipboard.readText();
 
     if (verifyContent !== finalContent) {
-      throw new Error(
-        "Clipboard verification failed: Content mismatch or clipboard access denied.",
-      );
+      throw new Error("Clipboard verification failed: Content mismatch or clipboard access denied.");
     }
 
-    // 3. Success UI Feedback
     document.getElementById("textContent").value = finalContent;
     updateMetadata(finalContent);
 
@@ -461,19 +580,14 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
       btn.classList.remove("copied");
     }, 2000);
 
-    // Final user notification
     if (newest) {
       const newestName = path.basename(newest.path);
       const newestTime = formatTimestamp(new Date(newest.mtimeMs));
-      alert(
-        `Files copied with newest timestamp ${newestTime} in file ${newestName}.`,
-      );
+      alert(`Files copied with newest timestamp ${newestTime} in file ${newestName}.`);
     }
   } catch (err) {
     console.error("Critical Copy Error: ", err);
     alert(`Copy Failed: ${err.message}`);
-
-    // Visual error state for the button
     const btn = document.getElementById("copyBtn");
     btn.style.backgroundColor = "var(--danger)";
     btn.innerText = "Copy Error!";
@@ -486,30 +600,22 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
   }
 });
 
+// --- Metadata ---
+
 function updateMetadata(text) {
   const metaInfo = document.getElementById("metaInfo");
   if (!text || text.trim() === "") {
     metaInfo.style.display = "none";
     return;
   }
-
-  // Calculate Lines
   const lines = text.split(/\r\n|\r|\n/).length;
-
-  // Calculate Words (matches alphanumeric sequences)
-  const words = text
-    .trim()
-    .split(/\s+/)
-    .filter((w) => w.length > 0).length;
-
-  // Calculate Size (using Blob to get accurate byte count for UTF-8)
+  const words = text.trim().split(/\s+/).filter((w) => w.length > 0).length;
   const bytes = new Blob([text]).size;
   let sizeStr = "";
   if (bytes < 1024) sizeStr = bytes + " B";
   else if (bytes < 1048576) sizeStr = (bytes / 1024).toFixed(2) + " KB";
   else sizeStr = (bytes / 1048576).toFixed(2) + " MB";
 
-  // Update UI
   document.getElementById("metaLines").innerText = lines.toLocaleString();
   document.getElementById("metaWords").innerText = words.toLocaleString();
   document.getElementById("metaSize").innerText = sizeStr;
@@ -523,8 +629,7 @@ function formatTimestamp(date) {
 
 async function rebuildContent(signal) {
   const files = await getFiles(signal);
-  if (signal.aborted)
-    return { aborted: true, files: [], combined: "", newest: null };
+  if (signal.aborted) return { aborted: true, files: [], combined: "", newest: null };
 
   let combined = "";
   let newest = null;

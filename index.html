@@ -216,6 +216,69 @@
         background: #f5f3ff;
       }
 
+      /* File Type Filter Chips */
+      #fileTypeFilter {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      #fileTypeFilter .ft-header {
+        width: 100%;
+        font-size: 12px;
+        margin-bottom: 2px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      #fileTypeFilter .ft-header-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      #fileTypeFilter .ft-action-link {
+        font-size: 11px;
+        color: var(--primary);
+        cursor: pointer;
+        text-decoration: underline;
+        background: none;
+        border: none;
+        padding: 0;
+        font-weight: 500;
+      }
+
+      #fileTypeFilter label {
+        background: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+        user-select: none;
+      }
+
+      #fileTypeFilter label:hover {
+        border-color: var(--primary);
+        background: #f5f3ff;
+      }
+
+      #fileTypeFilter label.excluded {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: var(--danger);
+        text-decoration: line-through;
+      }
+
+      #fileTypeFilter label.excluded:hover {
+        background: #fecaca;
+        border-color: var(--danger);
+      }
+
       /* Text Area & Output */
       #output {
         flex-grow: 1;
@@ -320,6 +383,23 @@
         background-color: #10b981 !important; /* Success Green */
       }
 
+      #saveConfigBtn {
+        background: white;
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        width: 100%;
+      }
+      #saveConfigBtn:hover {
+        background: #f1f5f9;
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+      #saveConfigBtn.saved {
+        background-color: #10b981 !important;
+        color: white !important;
+        border-color: #10b981 !important;
+      }
+
       #excludeInput {
         width: 100%;
         min-height: 110px;
@@ -363,6 +443,11 @@
         </div>
 
         <div>
+          <span class="section-label">File Types Detected</span>
+          <div id="fileTypeFilter"></div>
+        </div>
+
+        <div>
           <span class="section-label">Manual Excludes (CSV)</span>
           <textarea
             id="excludeInput"
@@ -376,6 +461,7 @@
           <button id="concatBtn">Concat Files</button>
         </div>
         <button id="copyBtn">Copy Full Content</button>
+        <button id="saveConfigBtn">💾 Save Config (.concatignore)</button>
       </div>
 
       <div class="main-content">

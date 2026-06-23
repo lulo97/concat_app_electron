@@ -14,15 +14,16 @@ function createWindow() {
     }
   });
 
-  win.center(); // optional: center the window
+  win.center();
   win.loadFile('index.html');
 }
+
 // Handle the Multi-Folder Selection
 ipcMain.handle('select-folders', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory', 'multiSelections']
   });
-  return result.filePaths; // Returns an array of paths
+  return result.filePaths;
 });
 
 ipcMain.handle('show-warning', async (event, message) => {
@@ -33,7 +34,7 @@ ipcMain.handle('show-warning', async (event, message) => {
     title: 'Warning',
     message: message,
   });
-  return result.response; // 0 for Continue, 1 for Clear
+  return result.response;
 });
 
 ipcMain.handle('show-large-file-warning', async (event, fileName, fileSizeMB) => {
@@ -49,10 +50,33 @@ ipcMain.handle('show-large-file-warning', async (event, fileName, fileSizeMB) =>
   return result.response; // 0: Continue, 1: Skip, 2: Cancel
 });
 
+// Let user pick which folder to save .concatignore into (when multiple folders are open)
+ipcMain.handle('pick-config-folder', async (event, folderPaths) => {
+  // Build a list dialog using button labels (truncated paths)
+  const buttons = folderPaths.map((p) => {
+    // Show last 2 segments of path to keep labels readable
+    const parts = p.replace(/\\/g, '/').split('/').filter(Boolean);
+    return parts.slice(-2).join('/');
+  });
+  buttons.push('Cancel');
+
+  const result = await dialog.showMessageBox({
+    type: 'question',
+    title: 'Save .concatignore',
+    message: 'Which folder should the config be saved into?',
+    detail: 'A .concatignore file will be written to the root of the chosen folder.',
+    buttons,
+    defaultId: 0,
+    cancelId: buttons.length - 1,
+  });
+
+  const chosen = result.response;
+  if (chosen === folderPaths.length) return null; // Cancel
+  return folderPaths[chosen];
+});
+
 // Put Electron session/cache data somewhere writable
 app.setPath('sessionData', path.join(app.getPath('userData'), 'sessionData'));
-
-// Optional: if your app does not need HTTP caching at all
 app.commandLine.appendSwitch('disable-http-cache');
 
 app.whenReady().then(createWindow);
