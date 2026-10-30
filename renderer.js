@@ -14,37 +14,128 @@ const CONCATIGNORE_FILE = ".concatignore";
 
 const binaryExts = [
   // --- Images & Icons ---
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".tiff", ".ico", ".svg",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".tiff",
+  ".ico",
+  ".svg",
   // --- Media (Audio/Video) ---
-  ".mp4", ".webm", ".mov", ".avi", ".mp3", ".wav", ".flac", ".ogg",
+  ".mp4",
+  ".webm",
+  ".mov",
+  ".avi",
+  ".mp3",
+  ".wav",
+  ".flac",
+  ".ogg",
   // --- Documents & Archives ---
-  ".pdf", ".zip", ".tar", ".gz", ".7z", ".rar", ".jar", ".war",
+  ".pdf",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".7z",
+  ".rar",
+  ".jar",
+  ".war",
   // --- Executables & System ---
-  ".exe", ".dll", ".so", ".dylib", ".bin", ".msi", ".pyc",
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".bin",
+  ".msi",
+  ".pyc",
   // --- AI & Data Models ---
-  ".gguf", ".onnx", ".pt", ".pth", ".model", ".weights", ".safetensors",
+  ".gguf",
+  ".onnx",
+  ".pt",
+  ".pth",
+  ".model",
+  ".weights",
+  ".safetensors",
   // --- Databases ---
-  ".db", ".sqlite", ".db-shm", ".db-wal",
+  ".db",
+  ".sqlite",
+  ".db-shm",
+  ".db-wal",
   // --- Logs & Temp ---
-  ".log", ".tmp", ".temp", ".bak", ".swp",
+  ".log",
+  ".tmp",
+  ".temp",
+  ".bak",
+  ".swp",
   // --- Certificates & Keys ---
-  ".pem", ".crt", ".key", ".pub", ".der",
+  ".pem",
+  ".crt",
+  ".key",
+  ".pub",
+  ".der",
 ];
 
 const COMMON_NOISE = [
-  ".git", ".svn", ".hg", ".DS_Store", "thumbs.db", ".gitignore",
-  ".gitattributes", ".github",
-  "node_modules", "bower_components", "package-lock.json", "yarn.lock",
-  "pnpm-lock.yaml", "composer.lock", "Cargo.lock", "Gemfile.lock",
-  "dist", "build", "out", "target", "bin", "obj", "coverage",
-  ".next", ".nuxt", ".svelte-kit", ".astro", ".remix", ".cache",
-  ".turbo", ".parcel-cache", "storybook-static", ".gradle",
-  ".env", ".env.local", ".env.development", ".env.production", ".env.test",
-  ".vs", ".vscode", ".idea", ".angular", "venv", ".venv", "env",
-  "__pycache__", ".pytest_cache", ".eslintcache", ".stylelintcache",
-  "nest-cli.json", "tsconfig.json", "tsconfig.build.json",
-  "tsconfig.node.json", "tsconfig.app.json", "go.sum",
-  "README.md", "LICENSE", "CONTRIBUTING.md", "project-structure.txt", ".prisma",
+  ".git",
+  ".svn",
+  ".hg",
+  ".DS_Store",
+  "thumbs.db",
+  ".gitignore",
+  ".gitattributes",
+  ".github",
+  "node_modules",
+  "bower_components",
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+  "composer.lock",
+  "Cargo.lock",
+  "Gemfile.lock",
+  "dist",
+  "build",
+  "out",
+  "target",
+  "bin",
+  "obj",
+  "coverage",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".astro",
+  ".remix",
+  ".cache",
+  ".turbo",
+  ".parcel-cache",
+  "storybook-static",
+  ".gradle",
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.production",
+  ".env.test",
+  ".vs",
+  ".vscode",
+  ".idea",
+  ".angular",
+  "venv",
+  ".venv",
+  "env",
+  "__pycache__",
+  ".pytest_cache",
+  ".eslintcache",
+  ".stylelintcache",
+  "nest-cli.json",
+  "tsconfig.json",
+  "tsconfig.build.json",
+  "tsconfig.node.json",
+  "tsconfig.app.json",
+  "go.sum",
+  "README.md",
+  "LICENSE",
+  "CONTRIBUTING.md",
+  "project-structure.txt",
+  ".prisma",
 ];
 
 // --- UI Helpers ---
@@ -144,7 +235,8 @@ async function detectFileTypes() {
   }
 
   if (foundExts.size === 0) {
-    container.innerHTML = "<span style='font-size:12px; color: var(--text-muted);'>No folders selected yet.</span>";
+    container.innerHTML =
+      "<span style='font-size:12px; color: var(--text-muted);'>No folders selected yet.</span>";
     return;
   }
 
@@ -166,7 +258,9 @@ async function detectFileTypes() {
     const isExcluded = excludedFileTypes.has(ext);
     const label = document.createElement("label");
     label.className = isExcluded ? "excluded" : "";
-    label.title = isExcluded ? `${ext} files are excluded` : `${ext} files are included`;
+    label.title = isExcluded
+      ? `${ext} files are excluded`
+      : `${ext} files are included`;
     label.innerHTML = `
       <input type="checkbox" ${isExcluded ? "" : "checked"}
         onchange="toggleFileTypeExclude('${ext}', this.checked)">
@@ -256,7 +350,10 @@ async function applyConfig(config) {
   if (config.folders && Array.isArray(config.folders)) {
     config.folders.forEach((entry) => {
       if (!selectedFolders.some((f) => f.path === entry.path)) {
-        selectedFolders.push({ path: entry.path, enabled: entry.enabled !== false });
+        selectedFolders.push({
+          path: entry.path,
+          enabled: entry.enabled !== false,
+        });
       }
     });
   }
@@ -267,8 +364,11 @@ async function applyConfig(config) {
     config.excludedFileTypes.forEach((ext) => excludedFileTypes.add(ext));
   }
   if (config.manualExcludes && Array.isArray(config.manualExcludes)) {
-    const existingRaw = document.getElementById("excludeInput").value
-      .split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    const existingRaw = document
+      .getElementById("excludeInput")
+      .value.split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     const merged = [...new Set([...existingRaw, ...config.manualExcludes])];
     document.getElementById("excludeInput").value = merged.join(", ");
   }
@@ -308,7 +408,10 @@ document.getElementById("saveConfigBtn").addEventListener("click", async () => {
     targetFolder = enabledFolders[0].path;
   } else {
     // Let user pick which folder to save the .concatignore into
-    const choice = await ipcRenderer.invoke("pick-config-folder", enabledFolders.map((f) => f.path));
+    const choice = await ipcRenderer.invoke(
+      "pick-config-folder",
+      enabledFolders.map((f) => f.path),
+    );
     if (choice === null || choice === undefined) return; // Cancelled
     targetFolder = choice;
   }
@@ -377,6 +480,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
   updateFolderUI();
   document.getElementById("textContent").value = "";
   document.getElementById("excludeInput").value = "";
+  document.getElementById("contentFilterInput").value = "";
   updateMetadata("");
 });
 
@@ -418,6 +522,39 @@ function showToast(message, duration = 3000) {
 }
 
 // --- Core File Logic ---
+// Search file contents without loading the entire file into memory.
+async function fileContainsKeyword(filePath, keyword, signal) {
+  if (!keyword) return true;
+
+  const stream = fsSync.createReadStream(filePath, {
+    encoding: "utf8",
+  });
+
+  let overlap = "";
+
+  try {
+    for await (const chunk of stream) {
+      if (signal.aborted) {
+        stream.destroy();
+        return false;
+      }
+
+      const text = (overlap + chunk).toLowerCase();
+
+      // Match the keyword, including matches across chunk boundaries.
+      if (text.includes(keyword)) {
+        stream.destroy();
+        return true;
+      }
+
+      overlap = keyword.length > 1 ? text.slice(-(keyword.length - 1)) : "";
+    }
+
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
 
 async function getFiles(signal) {
   const manualExcludes = document
@@ -432,7 +569,25 @@ async function getFiles(signal) {
     if (signal.aborted) return [];
     await walk(folderObj.path, allFiles, allExcludes, signal);
   }
-  return allFiles;
+  // Apply optional content search filter
+  const keyword = document
+    .getElementById("contentFilterInput")
+    .value.trim()
+    .toLowerCase();
+
+  if (!keyword) return allFiles;
+
+  const matchingFiles = [];
+
+  for (const file of allFiles) {
+    if (signal.aborted) return [];
+
+    if (await fileContainsKeyword(file, keyword, signal)) {
+      matchingFiles.push(file);
+    }
+  }
+
+  return matchingFiles;
 }
 
 async function walk(dir, filelist = [], excludes = [], signal) {
@@ -496,7 +651,11 @@ document.getElementById("concatBtn").addEventListener("click", async () => {
       const fileSizeMB = stat.size / (1024 * 1024);
 
       if (fileSizeMB > 1) {
-        const choice = await ipcRenderer.invoke("show-large-file-warning", fileName, fileSizeMB);
+        const choice = await ipcRenderer.invoke(
+          "show-large-file-warning",
+          fileName,
+          fileSizeMB,
+        );
         if (choice === 1) {
           const currentExcludes = excludeInput.value
             ? excludeInput.value.split(",").map((s) => s.trim())
@@ -563,7 +722,9 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
     const verifyContent = clipboard.readText();
 
     if (verifyContent !== finalContent) {
-      throw new Error("Clipboard verification failed: Content mismatch or clipboard access denied.");
+      throw new Error(
+        "Clipboard verification failed: Content mismatch or clipboard access denied.",
+      );
     }
 
     document.getElementById("textContent").value = finalContent;
@@ -583,7 +744,9 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
     if (newest) {
       const newestName = path.basename(newest.path);
       const newestTime = formatTimestamp(new Date(newest.mtimeMs));
-      alert(`Files copied with newest timestamp ${newestTime} in file ${newestName}.`);
+      alert(
+        `Files copied with newest timestamp ${newestTime} in file ${newestName}.`,
+      );
     }
   } catch (err) {
     console.error("Critical Copy Error: ", err);
@@ -609,7 +772,10 @@ function updateMetadata(text) {
     return;
   }
   const lines = text.split(/\r\n|\r|\n/).length;
-  const words = text.trim().split(/\s+/).filter((w) => w.length > 0).length;
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0).length;
   const bytes = new Blob([text]).size;
   let sizeStr = "";
   if (bytes < 1024) sizeStr = bytes + " B";
@@ -629,7 +795,8 @@ function formatTimestamp(date) {
 
 async function rebuildContent(signal) {
   const files = await getFiles(signal);
-  if (signal.aborted) return { aborted: true, files: [], combined: "", newest: null };
+  if (signal.aborted)
+    return { aborted: true, files: [], combined: "", newest: null };
 
   let combined = "";
   let newest = null;

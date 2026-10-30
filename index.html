@@ -91,7 +91,7 @@
         text-transform: uppercase;
         color: var(--text-muted);
         letter-spacing: 0.05em;
-        margin-bottom: 8px;
+        /* margin-bottom: 8px; */
         display: block;
       }
 
@@ -454,6 +454,18 @@
             placeholder="e.g. temp, cache, logs"
             rows="5"
           ></textarea>
+        </div>
+
+        <div>
+          <span class="section-label">Content Search (Optional)</span>
+          <input
+            id="contentFilterInput"
+            type="text"
+            placeholder="e.g. setting"
+          />
+          <small style="font-size: 11px; color: var(--text-muted)">
+            Only include files containing this keyword.
+          </small>
         </div>
 
         <div class="action-bar">
