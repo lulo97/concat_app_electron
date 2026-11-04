@@ -1,505 +1,190 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Folder Concatenator</title>
-    <style>
-      :root {
-        --bg-main: #f8fafc;
-        --bg-card: #ffffff;
-        --primary: #6366f1;
-        --primary-hover: #4f46e5;
-        --danger: #ef4444;
-        --danger-hover: #dc2626;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
-        --border: #e2e8f0;
-        --radius: 8px;
-        --shadow:
-          0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Folder Concatenator</title>
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+          colors: { primary: '#6366f1', 'primary-hover': '#4f46e5' },
+        },
+      },
+    };
+  </script>
 
-      body {
-        font-family:
-          "Inter",
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          Roboto,
-          sans-serif;
-        background-color: var(--bg-main);
-        color: var(--text-main);
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet" />
 
-      /* Header Section */
-      header {
-        background: var(--bg-card);
-        padding: 16px 24px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
+  <!-- jQuery (CDN). Electron's node integration makes jQuery think it is a CommonJS module and skip
+       creating window.$, so hide `module` while it loads, then restore it. -->
+  <script>if (typeof module === 'object') { window.__module = module; module = undefined; }</script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script>if (window.__module) { module = window.__module; }</script>
 
-      h1 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text-main);
-      }
+  <style type="text/tailwindcss">
+    @layer components {
+      .section-title { @apply mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-500; }
+      .hint { @apply mt-2 block text-[11px] leading-relaxed text-slate-500; }
+      .field { @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:bg-slate-100; }
+      .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors active:scale-95; }
+      .btn-primary { @apply bg-primary text-white hover:bg-primary-hover; }
+      .btn-dark { @apply bg-slate-800 text-white hover:bg-slate-900; }
+      .btn-light { @apply border border-slate-200 bg-white text-slate-800 hover:border-primary hover:bg-slate-50 hover:text-primary; }
+      .chip { @apply flex cursor-pointer select-none items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] transition-colors hover:border-primary hover:bg-indigo-50; }
+      .chip-off { @apply border-red-300 bg-red-50 text-red-500 line-through hover:border-red-400 hover:bg-red-100; }
+      .link-btn { @apply text-[11px] font-medium text-primary underline; }
+    }
+  </style>
+  <style>
+    .btn.is-success { background:#10b981 !important; border-color:#10b981 !important; color:#fff !important; }
+    .btn.is-error   { background:#ef4444 !important; border-color:#ef4444 !important; color:#fff !important; }
+  </style>
+</head>
 
-      /* Layout Containers */
-      .app-container {
-        display: grid;
-        grid-template-columns: 350px 1fr;
-        flex-grow: 1;
-        overflow: hidden;
-      }
+<body class="flex h-screen flex-col overflow-hidden bg-slate-50 font-sans text-slate-800">
 
-      .sidebar {
-        background: var(--bg-card);
-        border-right: 1px solid var(--border);
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        overflow-y: auto;
-      }
-
-      .main-content {
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        background: var(--bg-main);
-      }
-
-      /* UI Elements */
-      .section-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: var(--text-muted);
-        letter-spacing: 0.05em;
-        /* margin-bottom: 8px; */
-        display: block;
-      }
-
-      button {
-        font-family: inherit;
-        font-weight: 500;
-        font-size: 0.875rem;
-        padding: 8px 16px;
-        border-radius: var(--radius);
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid transparent;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-      }
-
-      #addBtn {
-        background: var(--primary);
-        color: white;
-      }
-      #addBtn:hover {
-        background: var(--primary-hover);
-      }
-
-      #clearBtn {
-        background: white;
-        border-color: var(--border);
-        color: var(--text-main);
-      }
-      #clearBtn:hover {
-        background: #f1f5f9;
-      }
-
-      .action-bar {
-        display: flex;
-        gap: 10px;
-        padding-top: 10px;
-        border-top: 1px solid var(--border);
-      }
-
-      #listBtn,
-      #concatBtn {
-        background: var(--text-main);
-        color: white;
-        flex: 1;
-      }
-      #copyBtn {
-        background: var(--primary);
-        color: white;
-      }
-
-      /* Inputs */
-      input[type="text"] {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        font-size: 0.875rem;
-        outline: none;
-        transition: border-color 0.2s;
-      }
-
-      input[type="text"]:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-      }
-
-      /* Lists & Items */
-      #folderList {
-        list-style: none;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: #fafafa;
-        max-height: 250px;
-        overflow-y: auto;
-      }
-
-      .folder-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 12px;
-        border-bottom: 1px solid var(--border);
-        font-size: 0.8125rem;
-        animation: fadeIn 0.3s ease;
-      }
-
-      .folder-item:last-child {
-        border-bottom: none;
-      }
-
-      .remove-btn {
-        background: transparent;
-        color: var(--text-muted);
-        padding: 4px 8px;
-        font-size: 0.75rem;
-      }
-
-      .remove-btn:hover {
-        color: var(--danger);
-        background: #fee2e2;
-      }
-
-      /* Smart Excludes Chips */
-      #smartExcludes label {
-        background: white;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        border: 1px solid var(--border);
-        transition: all 0.2s;
-      }
-
-      #smartExcludes label:hover {
-        border-color: var(--primary);
-        background: #f5f3ff;
-      }
-
-      /* File Type Filter Chips */
-      #fileTypeFilter {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      #fileTypeFilter .ft-header {
-        width: 100%;
-        font-size: 12px;
-        margin-bottom: 2px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      #fileTypeFilter .ft-header-actions {
-        display: flex;
-        gap: 6px;
-      }
-
-      #fileTypeFilter .ft-action-link {
-        font-size: 11px;
-        color: var(--primary);
-        cursor: pointer;
-        text-decoration: underline;
-        background: none;
-        border: none;
-        padding: 0;
-        font-weight: 500;
-      }
-
-      #fileTypeFilter label {
-        background: white;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        border: 1px solid var(--border);
-        transition: all 0.2s;
-        user-select: none;
-      }
-
-      #fileTypeFilter label:hover {
-        border-color: var(--primary);
-        background: #f5f3ff;
-      }
-
-      #fileTypeFilter label.excluded {
-        background: #fee2e2;
-        border-color: #fca5a5;
-        color: var(--danger);
-        text-decoration: line-through;
-      }
-
-      #fileTypeFilter label.excluded:hover {
-        background: #fecaca;
-        border-color: var(--danger);
-      }
-
-      /* Text Area & Output */
-      #output {
-        flex-grow: 1;
-        position: relative;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-      }
-
-      textarea {
-        width: 100%;
-        height: 100%;
-        border: none;
-        padding: 20px;
-        font-family: "Fira Code", "Courier New", monospace;
-        font-size: 0.875rem;
-        line-height: 1.6;
-        resize: none;
-        outline: none;
-        color: #334155;
-      }
-
-      /* Metadata Bar */
-      #metaInfo {
-        display: none;
-        gap: 24px;
-        background: #1e293b;
-        padding: 10px 20px;
-        border-radius: var(--radius);
-        font-size: 12px;
-        color: #94a3b8;
-        margin-top: auto;
-      }
-
-      #metaInfo strong {
-        color: white;
-        margin-right: 4px;
-      }
-
-      /* Loading Overlay */
-      #loadingOverlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(4px);
-        z-index: 10000;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid #e2e8f0;
-        border-top: 4px solid var(--primary);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin-bottom: 16px;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(5px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      #cancelBtn {
-        background: var(--danger);
-        color: white;
-        margin-top: 15px;
-      }
-      #cancelBtn:hover {
-        background: var(--danger-hover);
-      }
-
-      /* Feedback for the copy button */
-      #copyBtn {
-        transition:
-          transform 0.1s,
-          background-color 0.2s;
-      }
-
-      #copyBtn:active {
-        transform: scale(0.95);
-      }
-
-      #copyBtn.copied {
-        background-color: #10b981 !important; /* Success Green */
-      }
-
-      #saveConfigBtn {
-        background: white;
-        border: 1px solid var(--border);
-        color: var(--text-main);
-        width: 100%;
-      }
-      #saveConfigBtn:hover {
-        background: #f1f5f9;
-        border-color: var(--primary);
-        color: var(--primary);
-      }
-      #saveConfigBtn.saved {
-        background-color: #10b981 !important;
-        color: white !important;
-        border-color: #10b981 !important;
-      }
-
-      #excludeInput {
-        width: 100%;
-        min-height: 110px;
-        max-height: 180px;
-        padding: 10px 12px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        font-size: 0.875rem;
-        font-family: inherit;
-        line-height: 1.5;
-        outline: none;
-        resize: vertical;
-        overflow-y: auto;
-      }
-
-      #excludeInput:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      <h1>Concatenator.io</h1>
-      <div style="display: flex; gap: 8px">
-        <button id="addBtn">Add Folders</button>
-        <button id="clearBtn">Clear All</button>
-      </div>
-    </header>
-
-    <div class="app-container">
-      <div class="sidebar">
-        <div>
-          <span class="section-label">Selected Folders</span>
-          <ul id="folderList"></ul>
-        </div>
-
-        <div>
-          <span class="section-label">Auto-Detect Filters</span>
-          <div id="smartExcludes"></div>
-        </div>
-
-        <div>
-          <span class="section-label">File Types Detected</span>
-          <div id="fileTypeFilter"></div>
-        </div>
-
-        <div>
-          <span class="section-label">Manual Excludes (CSV)</span>
-          <textarea
-            id="excludeInput"
-            placeholder="e.g. temp, cache, logs"
-            rows="5"
-          ></textarea>
-        </div>
-
-        <div>
-          <span class="section-label">Content Search (Optional)</span>
-          <input
-            id="contentFilterInput"
-            type="text"
-            placeholder="e.g. setting"
-          />
-          <small style="font-size: 11px; color: var(--text-muted)">
-            Only include files containing this keyword.
-          </small>
-        </div>
-
-        <div class="action-bar">
-          <button id="listBtn">List Files</button>
-          <button id="concatBtn">Concat Files</button>
-        </div>
-        <button id="copyBtn">Copy Full Content</button>
-        <button id="saveConfigBtn">💾 Save Config (.concatignore)</button>
-      </div>
-
-      <div class="main-content">
-        <div id="output">
-          <textarea
-            id="textContent"
-            placeholder="Output will appear here..."
-          ></textarea>
-        </div>
-
-        <div id="metaInfo">
-          <span><strong>Lines</strong> <span id="metaLines">0</span></span>
-          <span><strong>Words</strong> <span id="metaWords">0</span></span>
-          <span><strong>Size</strong> <span id="metaSize">0 KB</span></span>
-        </div>
-      </div>
+  <!-- Header -->
+  <header class="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+    <h1 class="text-xl font-semibold">Concatenator.io</h1>
+    <div class="flex gap-2">
+      <button id="addBtn" class="btn btn-primary">Add Folders</button>
+      <button id="clearBtn" class="btn btn-light">Clear All</button>
     </div>
+  </header>
 
-    <div id="loadingOverlay">
-      <div class="spinner"></div>
-      <p id="loadingText" style="font-weight: 600; color: var(--text-main)">
-        Processing...
-      </p>
-      <button id="cancelBtn">Cancel Process</button>
-    </div>
+  <!-- Main layout -->
+  <div class="grid min-h-0 flex-1 grid-cols-[360px_minmax(0,1fr)]">
 
-    <script src="renderer.js"></script>
-  </body>
+    <!-- Sidebar: scrollable settings + pinned action footer -->
+    <aside class="flex min-h-0 flex-col border-r border-slate-200 bg-white">
+      <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
+
+        <section>
+          <span class="section-title">Selected Folders</span>
+          <ul id="folderList" class="max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50"></ul>
+        </section>
+
+        <section>
+          <span class="section-title">Auto-Detect Filters</span>
+          <div id="smartExcludes" class="flex flex-wrap gap-2"></div>
+        </section>
+
+        <section>
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">File Types Detected</span>
+            <div class="flex gap-3">
+              <button id="incAllTypes" type="button" class="link-btn">Include All</button>
+              <button id="excAllTypes" type="button" class="link-btn">Exclude All</button>
+            </div>
+          </div>
+          <div id="fileTypeChips" class="flex flex-wrap gap-2"></div>
+        </section>
+
+        <section>
+          <label for="excludeInput" class="section-title">Manual Excludes (CSV)</label>
+          <textarea id="excludeInput" rows="3" placeholder="e.g. temp, cache, logs" class="field max-h-40 min-h-[72px] resize-y"></textarea>
+        </section>
+
+        <section>
+          <label for="includeInput" class="section-title">Manual Includes (CSV)</label>
+          <textarea id="includeInput" rows="3" placeholder="e.g. src, components, main.js" class="field max-h-40 min-h-[72px] resize-y"></textarea>
+          <small class="hint">Empty = include everything. Otherwise only files whose name, or any parent folder name, matches a term (case-insensitive).</small>
+        </section>
+
+        <div id="conflictWarning" class="hidden rounded-lg border border-red-300 bg-red-50 p-3 text-xs leading-relaxed text-red-900"></div>
+
+        <section>
+          <label for="contentFilterInput" class="section-title">Content Search (Optional)</label>
+          <input id="contentFilterInput" type="text" placeholder="e.g. player, score" class="field" />
+          <small class="hint">Comma-separated keywords. Only files containing them are included.</small>
+          <div class="mt-3 flex flex-col gap-2 text-xs">
+            <label class="flex cursor-pointer select-none items-center gap-2" title="Unchecked = OR (any keyword). Checked = AND (all keywords).">
+              <input type="checkbox" id="searchModeToggle" class="h-3.5 w-3.5 cursor-pointer accent-primary" />
+              <span id="searchModeLabel">OR mode (any keyword matches)</span>
+            </label>
+            <label class="flex cursor-pointer select-none items-center gap-2" title="Match whole words only: 'player' will not match 'players' or 'subplayer'.">
+              <input type="checkbox" id="wholeWordToggle" class="h-3.5 w-3.5 cursor-pointer accent-primary" />
+              <span>Whole word only</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <label for="extractMode" class="section-title">Result Mode</label>
+          <select id="extractMode" class="field">
+            <option value="full">Full file</option>
+            <option value="context">Matched lines ± N</option>
+            <option value="block" selected>Enclosing function / class</option>
+          </select>
+          <small id="extractHint" class="hint"></small>
+
+          <div id="extractOptions" class="mt-3 transition-opacity">
+            <div class="grid grid-cols-3 gap-2">
+              <label class="flex min-w-0 flex-col gap-1 text-[11px] text-slate-500">
+                <span class="truncate" title="Lines of context around each match">Context ±</span>
+                <input id="ctxLines" type="number" min="0" value="10" class="field px-2 py-1.5" />
+              </label>
+              <label class="flex min-w-0 flex-col gap-1 text-[11px] text-slate-500">
+                <span class="truncate" title="Files with this many lines or fewer are always included in full">Small file ≤</span>
+                <input id="smallFile" type="number" min="0" value="150" class="field px-2 py-1.5" />
+              </label>
+              <label class="flex min-w-0 flex-col gap-1 text-[11px] text-slate-500">
+                <span class="truncate" title="Always keep the first N lines (imports / headers)">Keep head</span>
+                <input id="keepHead" type="number" min="0" value="0" class="field px-2 py-1.5" />
+              </label>
+            </div>
+            <label class="mt-3 flex cursor-pointer select-none items-center gap-2 text-xs">
+              <input type="checkbox" id="lineNumbers" checked class="h-3.5 w-3.5 cursor-pointer accent-primary" />
+              <span>Show original line numbers</span>
+            </label>
+          </div>
+          <small class="hint">Trimming only applies when Content Search has keywords.</small>
+        </section>
+      </div>
+
+      <!-- Pinned actions -->
+      <div class="flex shrink-0 flex-col gap-2 border-t border-slate-200 bg-white p-4">
+        <div class="grid grid-cols-2 gap-2">
+          <button id="listBtn" class="btn btn-dark">List Files</button>
+          <button id="concatBtn" class="btn btn-dark">Concat Files</button>
+        </div>
+        <button id="copyBtn" class="btn btn-primary w-full">Copy Full Content</button>
+        <button id="saveConfigBtn" class="btn btn-light w-full">💾 Save Config (.concatignore)</button>
+      </div>
+    </aside>
+
+    <!-- Output -->
+    <main class="flex min-h-0 min-w-0 flex-col gap-4 p-5">
+      <div class="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <textarea id="textContent" placeholder="Output will appear here..." spellcheck="false"
+          class="absolute inset-0 h-full w-full resize-none border-none p-5 font-mono text-sm leading-relaxed text-slate-700 outline-none"></textarea>
+      </div>
+      <div id="metaInfo" class="hidden shrink-0 gap-6 rounded-lg bg-slate-800 p-3 text-xs text-slate-400">
+        <span><strong class="mr-1 text-white">Lines</strong><span id="metaLines">0</span></span>
+        <span><strong class="mr-1 text-white">Words</strong><span id="metaWords">0</span></span>
+        <span><strong class="mr-1 text-white">Size</strong><span id="metaSize">0 KB</span></span>
+      </div>
+    </main>
+  </div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 z-50 hidden flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+    <div class="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary"></div>
+    <div id="loadingText" class="text-center font-semibold">Processing...</div>
+    <button id="cancelBtn" class="btn mt-4 bg-red-500 text-white hover:bg-red-600">Cancel Process</button>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-[60] max-w-[80vw] -translate-x-1/2 translate-y-4 truncate rounded-lg bg-slate-800 px-5 py-2.5 text-[13px] font-medium text-white opacity-0 transition-all duration-300"></div>
+
+  <script src="renderer.js"></script>
+</body>
 </html>

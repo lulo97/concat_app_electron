@@ -1,11 +1,12 @@
 {
-  "name": "concat-app-electron",
-  "version": "1.0.0",
-  "description": "Multi-folder file concatenator",
-  "author": "Your Name",
+  "name": "folder-concatenator",
+  "version": "2.1.0",
+  "description": "Multi-folder file concatenator with context and code-block extraction",
+  "author": "Folder Concatenator Contributors",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test",
     "dist": "electron-builder --win",
     "dev-build": "electron-builder --win --dir"
   },
@@ -14,9 +15,11 @@
       "main.js",
       "renderer.js",
       "index.html",
-      "!node_modules/**/*"
+      "src/**/*",
+      "README.md",
+      "!test/**/*"
     ],
-    "appId": "com.yourname.concatapp",
+    "appId": "io.folderconcatenator.desktop",
     "productName": "FolderConcatenator",
     "win": {
       "target": "portable"
@@ -28,5 +31,8 @@
   "devDependencies": {
     "electron": "^41.0.3",
     "electron-builder": "^26.8.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
