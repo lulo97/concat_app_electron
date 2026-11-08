@@ -7,6 +7,7 @@ const { buildOutput } = require('./builder');
 const { saveConfig } = require('./config');
 const { setLoading, setOutput, showToast, blockOnConflict } = require('./ui');
 const { formatTimestamp } = require('./utils');
+const { summarizeFiles } = require('./summarizer');
 
 const hasEnabledFolders = () => state.folders.some((folder) => folder.enabled);
 
@@ -122,4 +123,25 @@ async function saveConfigAction() {
   if (await saveConfig()) flash($('#saveConfigBtn'), 'Config Saved ✓');
 }
 
-module.exports = { listFiles, concatFiles, copyContent, cancelTask, saveConfigAction };
+function summarizeProject() {
+  if (!hasEnabledFolders()) return alert('Please add or enable at least one folder first.');
+  if (blockOnConflict()) return;
+
+  return runTask('Scanning folders...', async (signal) => {
+    const files = await getFiles(signal, updateStatus);
+    if (signal.aborted) return;
+
+    const pyFiles = files.filter((file) => /\.pyw?$/i.test(file));
+    if (!pyFiles.length) {
+      alert('No Python files matched the current filters.');
+      return;
+    }
+
+    updateStatus(`Summarising ${pyFiles.length} Python files...`);
+    const text = await summarizeFiles(pyFiles, signal);
+    if (signal.aborted) return;
+    setOutput(text);
+  });
+}
+
+module.exports = { listFiles, concatFiles, copyContent, cancelTask, saveConfigAction, summarizeProject };

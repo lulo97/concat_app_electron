@@ -73,7 +73,7 @@ function init() {
   });
 
   $('#extractMode').on('change', syncExtractUi);
-
+  $('#summarizeBtn').on('click', actions.summarizeProject);
   syncSearchModeLabel();
   syncExtractUi();
   renderFolders();

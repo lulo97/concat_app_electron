@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const state = require('./state');
 const { BINARY_EXTS, NOISE_MAP } = require('./constants');
-const { getFilterContext, fileMatchesIncludes } = require('./filters');
+const { getFilterContext, fileMatchesIncludes, isExcluded } = require('./filters');
 const { readSearchSpec, fileMatches } = require('./matchers');
 const { tick } = require('./utils');
 
@@ -19,8 +19,9 @@ async function walkFiles(dir, ctx, signal, onFile, depth = 0, maxDepth = Infinit
   if (signal?.aborted || depth > maxDepth) return;
   for (const entry of await readDir(dir)) {
     if (signal?.aborted) return;
-    if (entry.isSymbolicLink() || ctx.excludes.has(entry.name.toLowerCase())) continue;
+    if (entry.isSymbolicLink()) continue;
     const fullPath = path.join(dir, entry.name);
+    if (isExcluded(fullPath, entry.name, ctx)) continue;
     if (entry.isDirectory()) {
       await walkFiles(fullPath, ctx, signal, onFile, depth + 1, maxDepth);
     } else if (entry.isFile()) {
