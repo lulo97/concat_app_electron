@@ -36,7 +36,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "tree-sitter-python": "^0.25.0",
+    "@2h2d/tree-sitter-wasms": "^0.2.1",
     "web-tree-sitter": "^0.25.10"
   }
 }

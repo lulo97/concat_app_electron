@@ -131,14 +131,15 @@ function summarizeProject() {
     const files = await getFiles(signal, updateStatus);
     if (signal.aborted) return;
 
-    const pyFiles = files.filter((file) => /\.pyw?$/i.test(file));
-    if (!pyFiles.length) {
-      alert('No Python files matched the current filters.');
+    const scriptFiles = files.filter((file) => /\.(pyw?|gd)$/i.test(file));
+    if (!scriptFiles.length) {
+      alert('No Python or GDScript files matched the current filters.');
       return;
     }
 
-    updateStatus(`Summarising ${pyFiles.length} Python files...`);
-    const text = await summarizeFiles(pyFiles, signal);
+    updateStatus(`Summarising ${scriptFiles.length} script files...`);
+    const text = await summarizeFiles(scriptFiles, signal);
+
     if (signal.aborted) return;
     setOutput(text);
   });

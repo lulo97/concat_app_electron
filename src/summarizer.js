@@ -2,8 +2,11 @@ const fs = require('fs').promises;
 const path = require('path');
 const { Parser, Language } = require('web-tree-sitter');
 const { tick } = require('./utils');
+const { parseGDScript } = require('./gdscript-parser');
+const { fileURLToPath } = require('url');
+const { wasmURL } = require('@2h2d/tree-sitter-wasms');
 
-const HEADER = 'G = Global variable, F = Function, C = Class, L = Line count, I = Import';
+const HEADER = 'G=Global var, F=Function, F*=Static func, C=Class, L=Line count, I=Import/extends, S=Signal, K=Const, E=Exported var, T=Enum';
 
 // Node has no sys.stdlib_module_names, so keep a list (Python 3.12).
 const STDLIB = new Set(`__future__ abc argparse array ast asyncio atexit base64 bisect builtins bz2
@@ -23,8 +26,8 @@ function getParser() {
   parserPromise ??= (async () => {
     const treeWasm = path.join(path.dirname(require.resolve('web-tree-sitter')), 'tree-sitter.wasm');
     await Parser.init({ locateFile: () => treeWasm });
-    const pyWasm = path.join(path.dirname(require.resolve('tree-sitter-python/package.json')), 'tree-sitter-python.wasm');
-    const language = await Language.load(new Uint8Array(await fs.readFile(pyWasm)));
+    const pyWasmPath = fileURLToPath(wasmURL('python'));
+    const language = await Language.load(new Uint8Array(await fs.readFile(pyWasmPath)));
     const parser = new Parser();
     parser.setLanguage(language);
     return parser;
@@ -171,15 +174,26 @@ function summarizeSource(parser, source, label) {
   }
 }
 
+function summarizeGDScript(source, label) {
+  const { lines, items } = parseGDScript(source);
+  return [`\n@${label} (${lines}L)`, ...items.map(([, text]) => text)].join('\n');
+}
+
 async function summarizeFiles(files, signal) {
-  const parser = await getParser();
+  let parser = null; // lazy-load Python grammar chỉ khi cần
   const out = [HEADER];
   for (let i = 0; i < files.length; i += 1) {
     if (signal?.aborted) return '';
     if (i % 10 === 0) await tick();
     try {
       const source = await fs.readFile(files[i], 'utf8');
-      out.push(summarizeSource(parser, source, files[i]));
+      const ext = path.extname(files[i]).toLowerCase();
+      if (ext === '.gd') {
+        out.push(summarizeGDScript(source, files[i]));
+      } else {
+        parser ??= await getParser();
+        out.push(summarizeSource(parser, source, files[i]));
+      }
     } catch (error) {
       out.push(`@${files[i]} ERROR ${error.message}`);
     }
@@ -187,4 +201,4 @@ async function summarizeFiles(files, signal) {
   return out.join('\n');
 }
 
-module.exports = { summarizeFiles };
+module.exports = { summarizeFiles, summarizeGDScript };
