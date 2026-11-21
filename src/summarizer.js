@@ -5,8 +5,9 @@ const { tick } = require('./utils');
 const { parseGDScript } = require('./gdscript-parser');
 const { fileURLToPath } = require('url');
 const { wasmURL } = require('@2h2d/tree-sitter-wasms');
+const { summarizeCpp } = require('./cpp-summarizer');
 
-const HEADER = 'G=Global var, F=Function, F*=Static func, C=Class, L=Line count, I=Import/extends, S=Signal, K=Const, E=Exported var, T=Enum';
+const HEADER = 'G=Global var/member, F=Function, F*=Static func, C=Class/struct, L=Line count, I=Import/include/extends, S=Signal, K=Const, E=Exported var, T=Enum/typedef/alias, N=Namespace, P=Prototype (declaration only)';
 
 // Node has no sys.stdlib_module_names, so keep a list (Python 3.12).
 const STDLIB = new Set(`__future__ abc argparse array ast asyncio atexit base64 bisect builtins bz2
@@ -21,18 +22,32 @@ textwrap threading time timeit tkinter token tokenize tomllib trace traceback tr
 typing unicodedata unittest urllib uuid venv warnings weakref webbrowser xml xmlrpc zipfile zipimport
 zlib zoneinfo`.split(/\s+/));
 
+const LANG_BY_EXT = {
+  '.py': 'python', '.pyw': 'python',
+  '.c': 'cpp', '.h': 'cpp', '.cpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp',
+  '.hpp': 'cpp', '.hh': 'cpp', '.hxx': 'cpp',
+};
+
+let initPromise;
+const parsers = new Map(); // lang -> Promise<Parser>
+
 let parserPromise;
-function getParser() {
-  parserPromise ??= (async () => {
+function getParser(lang) {
+  initPromise ??= (async () => {
     const treeWasm = path.join(path.dirname(require.resolve('web-tree-sitter')), 'tree-sitter.wasm');
     await Parser.init({ locateFile: () => treeWasm });
-    const pyWasmPath = fileURLToPath(wasmURL('python'));
-    const language = await Language.load(new Uint8Array(await fs.readFile(pyWasmPath)));
-    const parser = new Parser();
-    parser.setLanguage(language);
-    return parser;
   })();
-  return parserPromise;
+  if (!parsers.has(lang)) {
+    parsers.set(lang, (async () => {
+      await initPromise;
+      const wasmPath = fileURLToPath(wasmURL(lang));
+      const language = await Language.load(new Uint8Array(await fs.readFile(wasmPath)));
+      const parser = new Parser();
+      parser.setLanguage(language);
+      return parser;
+    })());
+  }
+  return parsers.get(lang);
 }
 
 const collapse = (s) => s.replace(/\s+/g, ' ').trim();
@@ -180,7 +195,6 @@ function summarizeGDScript(source, label) {
 }
 
 async function summarizeFiles(files, signal) {
-  let parser = null; // lazy-load Python grammar chỉ khi cần
   const out = [HEADER];
   for (let i = 0; i < files.length; i += 1) {
     if (signal?.aborted) return '';
@@ -190,9 +204,10 @@ async function summarizeFiles(files, signal) {
       const ext = path.extname(files[i]).toLowerCase();
       if (ext === '.gd') {
         out.push(summarizeGDScript(source, files[i]));
+      } else if (LANG_BY_EXT[ext] === 'cpp') {
+        out.push(summarizeCpp(await getParser('cpp'), source, files[i]));
       } else {
-        parser ??= await getParser();
-        out.push(summarizeSource(parser, source, files[i]));
+        out.push(summarizeSource(await getParser('python'), source, files[i]));
       }
     } catch (error) {
       out.push(`@${files[i]} ERROR ${error.message}`);

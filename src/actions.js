@@ -131,10 +131,9 @@ function summarizeProject() {
     const files = await getFiles(signal, updateStatus);
     if (signal.aborted) return;
 
-    const scriptFiles = files.filter((file) => /\.(pyw?|gd)$/i.test(file));
+    const scriptFiles = files.filter((file) => /\.(pyw?|gd|c|cc|cxx|cpp|h|hh|hxx|hpp)$/i.test(file));
     if (!scriptFiles.length) {
-      alert('No Python or GDScript files matched the current filters.');
-      return;
+      alert('No Python, GDScript or C/C++ files matched the current filters.');
     }
 
     updateStatus(`Summarising ${scriptFiles.length} script files...`);
